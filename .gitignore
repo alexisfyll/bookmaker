@@ -11,10 +11,4 @@ notebooks/
 
 # Airflow
 airflow/logs/
-airflow/dags/
-airflow/plugins/
 airflow/config/
-
-# Docker related files
-docker-compose.yaml
-Dockerfile
