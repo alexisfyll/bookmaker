@@ -1,8 +1,9 @@
 import pandas as pd
-from pandas_gbq import read_gbq
+from pandas_gbq import read_gbq, to_gbq
 from dotenv import load_dotenv
 from bookmaker.functions import fn_get_game_report
 import os
+import time
 
 
 
@@ -71,6 +72,22 @@ def fn_generate_game_reports(df_new_games: pd.DataFrame):
     df_game_reports = pd.DataFrame()
     for i in range (df_new_games.shape[0]):
         df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i])
-        df_game_reports = pd.concat([df_game_reports, df_temp], ignore_index=True)    
+        df_game_reports = pd.concat([df_game_reports, df_temp], ignore_index=True)  
+        time.sleep(5)
 
     return df_game_reports
+
+def df_insert_games_and_game_reports(df_new_games: pd.DataFrame, df_new_game_reports: pd.DataFrame):
+    """
+    Insert the new games and game reports into the BigQuery table.
+
+    Parameters:
+    df_new_games (pd.DataFrame): A dataframe containing the new games.
+    df_new_game_reports (pd.DataFrame): A dataframe containing the new game reports.
+
+    """
+    games_table='fbref_raw_data.games'
+    game_reports_table='fbref_raw_data.game_reports'
+    
+    to_gbq(df_new_games, games_table, project_id=project_id, if_exists='append')
+    to_gbq(df_new_game_reports, game_reports_table, project_id=project_id, if_exists='append')
