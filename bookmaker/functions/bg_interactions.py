@@ -1,6 +1,7 @@
 import pandas as pd
 from pandas_gbq import read_gbq
 from dotenv import load_dotenv
+from bookmaker.functions import fn_get_game_report
 import os
 
 
@@ -69,7 +70,7 @@ def fn_generate_game_reports(df_new_games: pd.DataFrame):
     """
     df_game_reports = pd.DataFrame()
     for i in range (df_new_games.shape[0]):
-        df_temp = fn_generate_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i])
+        df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i])
         df_game_reports = pd.concat([df_game_reports, df_temp], ignore_index=True)    
 
     return df_game_reports

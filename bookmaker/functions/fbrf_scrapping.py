@@ -84,7 +84,7 @@ def fn_get_season_calendar(competition_id:int, season:str):
 
 
 
-def fn_generate_game_report(game_id: str, home_team_id: str, away_team_id: str):
+def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
     """
     Function that takes game_id, home_id and away_id to generate game reports for both teams
     """
