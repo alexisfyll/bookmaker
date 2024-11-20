@@ -4,6 +4,86 @@ from bs4 import BeautifulSoup
 import re
 
 
+def fn_get_season_calendar(competition_id:int, season:str):
+    """
+    Function that returns the fixtures of a season of a competition
+    Takes as input the competition id and the season in the format 'yyyy-yyyy' or 'yyyy'
+    """
+
+    # url of season calendar :
+    url = f'https://fbref.com/en/comps/{competition_id}/{season}/schedule/'
+
+    # Initializing parser
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, "html.parser")
+
+    # Read table with pandas
+    df_temp = pd.read_html(url, 
+                    attrs={"id":f"sched_{season}_{competition_id}_1"}
+                    )
+    df_fixtures = df_temp[0].dropna(how='all').reset_index(drop=True)
+
+    # Table cleaning
+    df_fixtures = df_fixtures[['Wk', 'Date', 'Home', 'Score', 'Away']]
+    df_fixtures.rename(columns={'Wk': 'gameweek',
+                            'Date': 'date',
+                            'Home': 'home_team',
+                            'Score': 'score',
+                            'Away': 'away_team'}, inplace=True)
+    df_fixtures['gameweek'] = df_fixtures['gameweek'].astype(int)
+    df_fixtures['date'] = pd.to_datetime(df_fixtures['date'])
+    
+
+    # Get the fixtures table html code to extract the game & teams ids
+    table = soup.find(id=f'sched_{season}_{competition_id}_1').find("tbody")
+
+    game_ids = []
+    home_ids = []
+    away_ids = []
+    squad_id_pattern = r"/squads/([a-f0-9]+)/"
+    game_id_pattern = r"/matches/([a-f0-9]+)/"
+
+    # Loop through the rows of the table
+    for game in table.find_all("tr"):
+        # Skip rows with spacer
+        if ("spacer" in game.get('class', []) and "partial_table" in game.get('class', []) and "result_all" in game.get('class', [])): 
+            continue
+
+        # Extract match report / home / away URLs
+        match_report = game.find('td', class_='left', attrs={'data-stat': 'match_report'})
+        home_team = game.find('td', class_='right', attrs={'data-stat': 'home_team'})
+        away_team = game.find('td', class_='left', attrs={'data-stat': 'away_team'})
+
+        # Check if the match_report element is found
+        if match_report:
+            mr = match_report.find('a').get('href')
+            ht = home_team.find('a').get('href')
+            at = away_team.find('a').get('href')
+            # extract game & teams ids using regex
+            game_id = re.search(game_id_pattern, mr)
+            home_id = re.search(squad_id_pattern, ht)
+            away_id = re.search(squad_id_pattern, at)
+            # Store ids
+            game_ids.append(game_id.group(1) if game_id else '')
+            home_ids.append(home_id.group(1) if home_id else '')
+            away_ids.append(away_id.group(1) if away_id else '')
+    
+    # Create a DataFrame from the list of match id
+    df_id = pd.DataFrame({
+                    'id': game_ids, 
+                    'home_id': home_ids,
+                    'away_id': away_ids
+                    })
+    
+    df_games = pd.concat([df_fixtures, df_id], axis=1)
+    df_games['season'] = season
+    df_games['competition_id'] = competition_id
+
+    return df_games
+
+
+
+
 def fn_generate_game_report(game_id: str, home_team_id: str, away_team_id: str):
     """
     Function that takes game_id, home_id and away_id to generate game reports for both teams
@@ -119,83 +199,3 @@ def fn_generate_game_report(game_id: str, home_team_id: str, away_team_id: str):
         df_output = pd.concat([df_output, pd.DataFrame([dict_report])], ignore_index=True)
 
     return df_output
-
-
-
-
-def fn_get_season_calendar(competition_id:int, season:str):
-    """
-    Function that returns the fixtures of a season of a competition
-    Takes as input the competition id and the season in the format 'yyyy-yyyy' or 'yyyy'
-    """
-
-    # url of season calendar :
-    url = f'https://fbref.com/en/comps/{competition_id}/{season}/schedule/'
-
-    # Initializing parser
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, "html.parser")
-
-    # Read table with pandas
-    df_temp = pd.read_html(url, 
-                    attrs={"id":f"sched_{season}_{competition_id}_1"}
-                    )
-    df_fixtures = df_temp[0].dropna(how='all').reset_index(drop=True)
-
-    # Table cleaning
-    df_fixtures = df_fixtures[['Wk', 'Date', 'Home', 'Score', 'Away']]
-    df_fixtures.rename(columns={'Wk': 'gameweek',
-                            'Date': 'date',
-                            'Home': 'home_team',
-                            'Score': 'score',
-                            'Away': 'away_team'}, inplace=True)
-    df_fixtures['gameweek'] = df_fixtures['gameweek'].astype(int)
-    df_fixtures['date'] = pd.to_datetime(df_fixtures['date'])
-    
-
-    # Get the fixtures table html code to extract the game & teams ids
-    table = soup.find(id=f'sched_{season}_{competition_id}_1').find("tbody")
-
-    game_ids = []
-    home_ids = []
-    away_ids = []
-    squad_id_pattern = r"/squads/([a-f0-9]+)/"
-    game_id_pattern = r"/matches/([a-f0-9]+)/"
-
-    # Loop through the rows of the table
-    for game in table.find_all("tr"):
-        # Skip rows with spacer
-        if ("spacer" in game.get('class', []) and "partial_table" in game.get('class', []) and "result_all" in game.get('class', [])): 
-            continue
-
-        # Extract match report / home / away URLs
-        match_report = game.find('td', class_='left', attrs={'data-stat': 'match_report'})
-        home_team = game.find('td', class_='right', attrs={'data-stat': 'home_team'})
-        away_team = game.find('td', class_='left', attrs={'data-stat': 'away_team'})
-
-        # Check if the match_report element is found
-        if match_report:
-            mr = match_report.find('a').get('href')
-            ht = home_team.find('a').get('href')
-            at = away_team.find('a').get('href')
-            # extract game & teams ids using regex
-            game_id = re.search(game_id_pattern, mr)
-            home_id = re.search(squad_id_pattern, ht)
-            away_id = re.search(squad_id_pattern, at)
-            # Store ids
-            game_ids.append(game_id.group(1) if game_id else '')
-            home_ids.append(home_id.group(1) if home_id else '')
-            away_ids.append(away_id.group(1) if away_id else '')
-    
-    # Create a DataFrame from the list of match id
-    df_id = pd.DataFrame({
-                    'id': game_ids, 
-                    'home_id': home_ids,
-                    'away_id': away_ids
-                    })
-    
-    df_games = pd.concat([df_fixtures, df_id], axis=1)
-    df_games['season'] = season
-    df_games['competition_id'] = competition_id
-
-    return df_games
