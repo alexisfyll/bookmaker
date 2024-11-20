@@ -1,0 +1,50 @@
+import sys
+
+from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, df_insert_games_and_game_reports
+
+
+
+## CODE SCHEMA
+
+## 1) Takes as arguments the competitions and the seasons concerned 
+## 2) For each competition and season, it retrieves the list of matches => 
+        # df_fbref = fn_get_season_calendar('9', '2024-2025)
+## 3) We need to compare the list of matches retrieved with the list of matches already in the database, and keep only new ones
+        # df_games_db = fn_get_database_games_ids()
+        # df_new_games = fn_compare_id(df_games_db, df_fbref)
+## 4) For each new match, we retrieve the match_reports
+        # df_new_game_reports = fn_generate_game_reports(df_new_games)
+## 5) Write the new matches and reports in the database
+        # df_insert_games_and_game_reports(df_new_games, df_new_game_reports)
+
+
+
+
+def main(competition_ids, seasons):
+    # Get the seasons calendars from FBref
+    df_fbref_data = fn_get_season_calendar(competition_ids, seasons)
+    
+    # Get the corresponding games from the database
+    df_games_db = fn_get_database_game_ids(competition_ids, seasons)
+
+    # Check if there are new games
+    df_new_games = fn_compare_id(df_games_db, df_fbref_data)
+
+    if df_new_games.empty:
+        print('No new games to insert')
+        return
+    else: 
+        print(f'{len(df_new_games)} new games to insert')
+
+    # Generate the game reports for new games
+    df_new_game_reports = fn_generate_game_reports(df_new_games)
+
+    df_insert_games_and_game_reports(df_new_games, df_new_game_reports)
+    
+
+if __name__ == "__main__":
+    # Make competitions and seasons as list
+    competition_ids = sys.argv[1].split(',')
+    seasons = sys.argv[2].split(',')
+
+    main(competition_ids, seasons)

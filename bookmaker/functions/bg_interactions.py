@@ -88,6 +88,9 @@ def df_insert_games_and_game_reports(df_new_games: pd.DataFrame, df_new_game_rep
     """
     games_table='fbref_raw_data.games'
     game_reports_table='fbref_raw_data.game_reports'
+
+    # Selection of right columns for games dataframe
+    df_games_insert = df_new_games[['id', 'competition_id', 'date', 'season', 'gameweek']]
     
-    to_gbq(df_new_games, games_table, project_id=project_id, if_exists='append')
+    to_gbq(df_games_insert, games_table, project_id=project_id, if_exists='append')
     to_gbq(df_new_game_reports, game_reports_table, project_id=project_id, if_exists='append')
