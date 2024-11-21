@@ -50,14 +50,18 @@ def main(competition_ids, seasons, max_gameweek):
     fn_insert_new_teams(df_new_games)
 
     # Generation and imports by batchs of 10 games to avoid timeout
-    batch_nb = int(f_new_games.shape[0] / 10) + (f_new_games.shape[0] % 10 > 0)
-    for i in range(0,df_new_games.shape[0], 10):
-        batch_nb = int(f_new_games.shape[0] / 10) 
-        df_new_game_reports = fn_generate_game_reports(df_new_games[i:i+10])
-        fn_insert_games_and_game_reports(df_new_games[i:i+10], df_new_game_reports)
+    games_per_batch = 10
+    batch_nb = int(df_new_games.shape[0] / games_per_batch) + (df_new_games.shape[0] % games_per_batch > 0)
+    
+    for i in range(0,df_new_games.shape[0], games_per_batch):
+        batch_nb = int(df_new_games.shape[0] / games_per_batch) 
+        df_new_game_reports = fn_generate_game_reports(df_new_games[i:i+games_per_batch])
+        fn_insert_games_and_game_reports(df_new_games[i:i+games_per_batch], df_new_game_reports)
         print(f'Batch {i+1}/{batch_nb} inserted')
 
-    return('All imports successfully completed')
+    message = 'All imports successfully completed'
+    print(message)
+    return(message)
 
 if __name__ == "__main__":
     # Make competitions and seasons as list

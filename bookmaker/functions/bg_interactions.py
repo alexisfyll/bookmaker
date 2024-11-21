@@ -94,7 +94,10 @@ def fn_insert_games_and_game_reports(df_new_games: pd.DataFrame, df_new_game_rep
     
     to_gbq(df_games_insert, games_table, project_id=project_id, if_exists='append')
     to_gbq(df_new_game_reports, game_reports_table, project_id=project_id, if_exists='append')
-    return ("Data inserted successfully.")
+    
+    message = "Data inserted successfully."
+    print(message)
+    return (message)
 
 
 def fn_insert_new_teams(df_new_games: pd.DataFrame):
@@ -123,10 +126,14 @@ def fn_insert_new_teams(df_new_games: pd.DataFrame):
     df_new_teams = fn_compare_id(df_teams_db, df_teams_fbref)
 
     if df_new_teams.empty:
-        return ("No new team to insert.")
+        message = "No new team to insert."
+        print(message)
+        return (message)
     
     teams_table='fbref_raw_data.teams'
 
     to_gbq(df_new_teams, teams_table, project_id=project_id, if_exists='append')
     
-    return ("Data inserted successfully.")
+    message = f"{df_new_teams.shape[0]} new teams inserted successfully."
+    print(message)
+    return(message)
