@@ -44,7 +44,7 @@ def fn_get_database_game_ids(competitions_ids: list, seasons: list):
     pd.DataFrame: A dataframe containing the 'id' column for the given competitions and seasons.
 
     """
-    competitions_formatted = [f"'{competition_id}'" for competition_id in competitions_ids]
+    competitions_formatted = [f"{competition_id}" for competition_id in competitions_ids]
     seasons_formatted = [f"'{season}'" for season in seasons]
 
     query = f"""
@@ -71,9 +71,11 @@ def fn_generate_game_reports(df_new_games: pd.DataFrame):
     """
     df_game_reports = pd.DataFrame()
     for i in range (df_new_games.shape[0]):
+        time.sleep(5) if i>0 else None
         df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i])
         df_game_reports = pd.concat([df_game_reports, df_temp], ignore_index=True)  
-        time.sleep(5)
+        print(f"Match reports for game {i+1} of {df_new_games.shape[0]} generated.")
+        
 
     return df_game_reports
 
@@ -94,3 +96,4 @@ def df_insert_games_and_game_reports(df_new_games: pd.DataFrame, df_new_game_rep
     
     to_gbq(df_games_insert, games_table, project_id=project_id, if_exists='append')
     to_gbq(df_new_game_reports, game_reports_table, project_id=project_id, if_exists='append')
+    return ("Data inserted successfully.")
