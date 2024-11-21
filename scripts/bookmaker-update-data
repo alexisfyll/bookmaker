@@ -1,5 +1,7 @@
-import sys
+#!/usr/bin/env python3
 
+import sys
+import re
 from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, df_insert_games_and_game_reports
 
 def validate_competition_ids(competition_ids):
@@ -42,13 +44,13 @@ def main(competition_ids, seasons, max_gameweek):
         print('No new games to insert')
         return
     else: 
-        print(f'{len(df_new_games)} new games to insert')
+        print(f'{df_new_games.shape[0]} new games to insert')
 
-    # Generate the game reports for new games
-    df_new_game_reports = fn_generate_game_reports(df_new_games)
-
-    df_insert_games_and_game_reports(df_new_games, df_new_game_reports)
-    
+    # Generation and imports by batchs of 10 games to avoid timeout
+    for i in range(0,df_new_games.shape[0], 10):
+        df_new_game_reports = fn_generate_game_reports(df_new_games[i:i+10])
+        df_insert_games_and_game_reports(df_new_games[i:i+10], df_new_game_reports)
+        print(f'Batch {i+1}/{i+10} inserted')
 
 if __name__ == "__main__":
     # Make competitions and seasons as list

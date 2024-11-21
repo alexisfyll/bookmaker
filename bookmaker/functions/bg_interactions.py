@@ -74,8 +74,6 @@ def fn_generate_game_reports(df_new_games: pd.DataFrame):
         time.sleep(5) if i>0 else None
         df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i])
         df_game_reports = pd.concat([df_game_reports, df_temp], ignore_index=True)  
-        print(f"Match reports for game {i+1} of {df_new_games.shape[0]} generated.")
-        
 
     return df_game_reports
 
