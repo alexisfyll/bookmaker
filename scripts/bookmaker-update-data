@@ -2,7 +2,7 @@
 
 import sys
 import re
-from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, df_insert_games_and_game_reports
+from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, fn_insert_games_and_game_reports, fn_insert_new_teams
 
 def validate_competition_ids(competition_ids):
     try:
@@ -41,16 +41,23 @@ def main(competition_ids, seasons, max_gameweek):
     df_new_games = fn_compare_id(df_games_db, df_fbref_data)
 
     if df_new_games.empty:
-        print('No new games to insert')
+        print('No new game to insert.')
         return
-    else: 
+    else:
         print(f'{df_new_games.shape[0]} new games to insert')
 
+    # Create new teams if necessary
+    fn_insert_new_teams(df_new_games)
+
     # Generation and imports by batchs of 10 games to avoid timeout
+    batch_nb = int(f_new_games.shape[0] / 10) + (f_new_games.shape[0] % 10 > 0)
     for i in range(0,df_new_games.shape[0], 10):
+        batch_nb = int(f_new_games.shape[0] / 10) 
         df_new_game_reports = fn_generate_game_reports(df_new_games[i:i+10])
-        df_insert_games_and_game_reports(df_new_games[i:i+10], df_new_game_reports)
-        print(f'Batch {i+1}/{i+10} inserted')
+        fn_insert_games_and_game_reports(df_new_games[i:i+10], df_new_game_reports)
+        print(f'Batch {i+1}/{batch_nb} inserted')
+
+    return('All imports successfully completed')
 
 if __name__ == "__main__":
     # Make competitions and seasons as list

@@ -77,7 +77,7 @@ def fn_generate_game_reports(df_new_games: pd.DataFrame):
 
     return df_game_reports
 
-def df_insert_games_and_game_reports(df_new_games: pd.DataFrame, df_new_game_reports: pd.DataFrame):
+def fn_insert_games_and_game_reports(df_new_games: pd.DataFrame, df_new_game_reports: pd.DataFrame):
     """
     Insert the new games and game reports into the BigQuery table.
 
@@ -94,4 +94,39 @@ def df_insert_games_and_game_reports(df_new_games: pd.DataFrame, df_new_game_rep
     
     to_gbq(df_games_insert, games_table, project_id=project_id, if_exists='append')
     to_gbq(df_new_game_reports, game_reports_table, project_id=project_id, if_exists='append')
+    return ("Data inserted successfully.")
+
+
+def fn_insert_new_teams(df_new_games: pd.DataFrame):
+    """
+    Insert the new teams into the BigQuery table.
+
+    Parameters:
+    df_new_games (pd.DataFrame): A dataframe containing the new games.
+
+    """
+    teams_table='fbref_raw_data.teams'
+
+    # get the teams scraped
+    df_teams_fbref = pd.concat([
+        df_new_games[['home_id', 'home_team']].rename(columns={'home_id': 'id', 'home_team': 'name'}),
+        df_new_games[['away_id', 'away_team']].rename(columns={'away_id': 'id', 'away_team': 'name'})
+        ]).drop_duplicates().reset_index(drop=True)
+    
+    query = """
+            SELECT id
+            FROM `fbref_raw_data.teams`
+            """
+
+    df_teams_db = read_gbq(query, project_id=project_id)
+
+    df_new_teams = fn_compare_id(df_teams_db, df_teams_fbref)
+
+    if df_new_teams.empty:
+        return ("No new team to insert.")
+    
+    teams_table='fbref_raw_data.teams'
+
+    to_gbq(df_new_teams, teams_table, project_id=project_id, if_exists='append')
+    
     return ("Data inserted successfully.")
