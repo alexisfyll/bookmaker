@@ -138,7 +138,7 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
         # tag_general_stats = f'stats_{team_id}_summary'
         general_stats = soup.find(id=f'stats_{team_id}_summary').find('tfoot')
         if general_stats is None:
-            print(f"general_stats not found for team_id: {team_id}")
+            print(f"general_stats not found for game_id {game_id} and team_id {team_id}")
             raise AttributeError("general_stats not found")
 
         dict_report['goals'] = int(general_stats.find("td", attrs={'data-stat': 'goals'}).string)
@@ -164,7 +164,7 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
         # Passing stats
         passing_stats = soup.find(id=f'stats_{team_id}_passing').find('tfoot')
         if passing_stats is None:
-            print(f"passing_stats not found for team_id: {team_id}")
+            print(f"passing_stats not found for game_id {game_id} and team_id {team_id}")
             raise AttributeError("passing_stats not found")
 
         dict_report['pass_xa'] = float(passing_stats.find("td", attrs={'data-stat': 'pass_xa'}).string)
@@ -173,7 +173,7 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
         # Passing type stats
         passing_type_stats = soup.find(id=f'stats_{team_id}_passing_types').find('tfoot')
         if passing_type_stats is None:
-            print(f"passing_type_stats not found for team_id: {team_id}")
+            print(f"passing_type_stats not found for game_id {game_id} and team_id {team_id}")
             raise AttributeError("passing_type_stats not found")
         
         dict_report['corner_kicks'] = int(passing_type_stats.find("td", attrs={'data-stat': 'corner_kicks'}).string)
@@ -182,7 +182,7 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
         # Defensive stats
         defensive_stats = soup.find(id=f'stats_{team_id}_defense').find('tfoot')
         if defensive_stats is None:
-            print(f"defensive_stats not found for team_id: {team_id}")
+            print(f"defensive_stats not found for game_id {game_id} and team_id {team_id}")
             raise AttributeError("defensive_stats not found")
 
         dict_report['tackles'] = int(defensive_stats.find("td", attrs={'data-stat': 'tackles'}).string)
@@ -197,7 +197,7 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
         # Possession stats
         possession_stats = soup.find(id=f'stats_{team_id}_possession').find('tfoot')
         if possession_stats is None:
-            print(f"possession_stats not found for team_id: {team_id}")
+            print(f"possession_stats not found for game_id {game_id} and team_id {team_id}")
             raise AttributeError("possession_stats not found")
         
         dict_report['touches_def_pen_area'] = int(possession_stats.find("td", attrs={'data-stat': 'touches_def_pen_area'}).string)
@@ -209,7 +209,7 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
         # Miscellaneous stats
         misc_stats = soup.find(id=f'stats_{team_id}_misc').find('tfoot')
         if misc_stats is None:
-            print(f"misc_stats not found for team_id: {team_id}")
+            print(f"misc_stats not found for game_id {game_id} and team_id {team_id}")
             raise AttributeError("misc_stats not found")
 
         dict_report['aerials_won'] = int(misc_stats.find("td", attrs={'data-stat': 'aerials_won'}).string)
@@ -224,13 +224,26 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
         # Keeper stats
         keeper_stats = soup.find(id=f'keeper_stats_{team_id}')
         if keeper_stats is None:
-            print(f"keeper_stats not found for team_id: {team_id}")
+            print(f"keeper_stats not found for game_id {game_id} and team_id {team_id}")
             raise AttributeError("keeper_stats not found")
         
-        dict_report['shots_on_target_against'] = int(keeper_stats.find("td", attrs={'data-stat': 'gk_shots_on_target_against'}).string)
-        dict_report['goals_against'] = int(keeper_stats.find("td", attrs={'data-stat': 'gk_goals_against'}).string)
-        dict_report['gk_saves'] = int(keeper_stats.find("td", attrs={'data-stat': 'gk_saves'}).string)
-        dict_report['gk_psxg'] = float(keeper_stats.find("td", attrs={'data-stat': 'gk_psxg'}).string)
+        try:
+            for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_shots_on_target_against'}):
+                dict_report['shots_on_target_against'] += int(stat.string)
+            
+            for stat in keeper_stats.find_all("td", attrs={'data-stat': 'goals_against'}):
+                dict_report['goals_against'] += int(stat.string)
+
+            for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_saves'}):
+                dict_report['gk_saves'] += 0 if stat.string is None else int(stat.string)
+            
+            for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_psxg'}):
+                dict_report['gk_psxg'] += 0 if stat.string is None else float(stat.string)
+
+        except TypeError:
+            print(f"Error in keeper stats for game_id {game_id} and team_id {team_id}")
+            raise AttributeError("Error in keeper stats")
+            
         
         # Append report to DataFrame
         df_output = pd.concat([df_output, pd.DataFrame([dict_report])], ignore_index=True)
