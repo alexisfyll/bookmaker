@@ -1,4 +1,6 @@
 from airflow.operators.python_operator import PythonOperator
+from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_insert_new_teams, \
+                                fn_generate_game_reports, fn_insert_games_and_game_reports
 
 def get_fixtures(**kwargs):
     competition_ids = kwargs['competition_ids']
