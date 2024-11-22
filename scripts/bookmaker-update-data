@@ -33,6 +33,7 @@ def main(competition_ids, seasons, max_gameweek):
     
     # Get the seasons calendars from FBref
     df_fbref_data = fn_get_season_calendar(competition_ids, seasons, max_gameweek)
+    print(f'Calendars scrapped.')
     
     # Get the corresponding games from the database
     df_games_db = fn_get_database_game_ids(competition_ids, seasons)
@@ -49,15 +50,20 @@ def main(competition_ids, seasons, max_gameweek):
     # Create new teams if necessary
     fn_insert_new_teams(df_new_games)
 
-    # Generation and imports by batchs of 10 games to avoid timeout
+    # Generation and imports by batches of 10 games to avoid timeout
     games_per_batch = 10
-    batch_nb = int(df_new_games.shape[0] / games_per_batch) + (df_new_games.shape[0] % games_per_batch > 0)
-    
-    for i in range(0,df_new_games.shape[0], games_per_batch):
-        batch_nb = int(df_new_games.shape[0] / games_per_batch) 
-        df_new_game_reports = fn_generate_game_reports(df_new_games[i:i+games_per_batch])
-        fn_insert_games_and_game_reports(df_new_games[i:i+games_per_batch], df_new_game_reports)
-        print(f'Batch {i+1}/{batch_nb} inserted')
+    total_games = df_new_games.shape[0]
+    batch_nb = (total_games + games_per_batch - 1) // games_per_batch  # Calculate the number of batches
+
+    for batch_index in range(batch_nb):
+        start_index = batch_index * games_per_batch
+        end_index = min(start_index + games_per_batch, total_games)
+        batch_df = df_new_games[start_index:end_index]
+        
+        print(f'Processing batch {batch_index + 1}/{batch_nb}.')
+        df_new_game_reports = fn_generate_game_reports(batch_df)
+        fn_insert_games_and_game_reports(batch_df, df_new_game_reports)
+        print(f'Batch {batch_index + 1}/{batch_nb} inserted.')
 
     message = 'All imports successfully completed'
     print(message)

@@ -229,16 +229,21 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
         
         try:
             for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_shots_on_target_against'}):
-                dict_report['shots_on_target_against'] += int(stat.string)
+                dict_report['shots_on_target_against'] = 0
+                dict_report['shots_on_target_against'] += 0 if stat.string is None else int(stat.string)
             
             for stat in keeper_stats.find_all("td", attrs={'data-stat': 'goals_against'}):
-                dict_report['goals_against'] += int(stat.string)
+                dict_report['goals_against'] = 0
+                dict_report['goals_against'] += 0 if stat.string is None else int(stat.string)
 
             for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_saves'}):
+                dict_report['gk_saves'] = 0
                 dict_report['gk_saves'] += 0 if stat.string is None else int(stat.string)
             
             for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_psxg'}):
+                dict_report['gk_psxg'] = 0
                 dict_report['gk_psxg'] += 0 if stat.string is None else float(stat.string)
+
 
         except TypeError:
             print(f"Error in keeper stats for game_id {game_id} and team_id {team_id}")
