@@ -2,6 +2,7 @@ import pandas as pd
 from pandas_gbq import read_gbq, to_gbq
 from dotenv import load_dotenv
 from bookmaker.functions import fn_get_game_report
+from math import random
 import os
 import time
 
