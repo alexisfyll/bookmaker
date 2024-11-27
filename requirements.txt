@@ -9,6 +9,7 @@ numpy
 pandas
 pandas_gbq
 python-dotenv
+google-cloud-bigquery
 
 
 # Scrapping

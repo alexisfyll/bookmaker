@@ -11,4 +11,3 @@ notebooks/
 
 # Airflow
 airflow_book/logs/
-airflow_book/config/

@@ -44,7 +44,7 @@ count_lines:
 docker_up:
 	@docker compose up -d
 
-stop_docker:
+docker_stop:
 	@docker ps -q | xargs -r docker stop
 
 
