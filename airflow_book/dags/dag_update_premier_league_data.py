@@ -1,35 +1,38 @@
 from airflow import DAG
+from airflow.decorators import task, dag
 from airflow.operators.python_operator import PythonOperator
 from datetime import datetime
 from airflow_book.plugins.airflow_utils_fbref_scrapping import get_fixtures, filter_new_games, insert_new_teams, insert_games_and_reports
 
-with DAG("dag_update_premier_league_data", start_date=datetime(2024, 11, 20),
-         schedule_interval="0 4 * * 3",  # Every Wednesday at 4:00 AM
-         catchup=False) as dag:
+@dag(start_date=datetime(2024, 11, 20), 
+     schedule_interval="0 4 * * 3", # Every Wednesday at 4:00 AM)
+     catchup=False)
+def dag_update_premier_league_data():
 
-    task_get_season_calendar = PythonOperator(
-        task_id='get_fixtures',
-        python_callable=get_fixtures,
-        op_kwargs={'competition_ids': [9], 'seasons': ['2024-2025']}
-    )
+    competition_ids = [9]
+    seasons = ['2023-2024']
+    max_gameweek = 21    
 
-    task_filter_new_game_ids = PythonOperator(
-        task_id='filter_new_games',
-        python_callable=filter_new_games,
-        provide_context=True,
-    )
-
-    task_insert_new_teams = PythonOperator(
-        task_id='insert_new_teams',
-        python_callable=insert_new_teams,
-        provide_context=True
-    )
-
-    task_process_batches = PythonOperator(
-        task_id='insert_games_and_reports',
-        python_callable=insert_games_and_reports,
-        provide_context=True
-    )
+    @task
+    def task_get_fixtures(competition_ids, seasons, max_gameweek):
+        return get_fixtures(competition_ids=competition_ids, seasons=seasons, max_gameweek=max_gameweek)
     
+    @task
+    def task_filter_new_games(competition_ids, seasons, df_fixtures):
+        return filter_new_games(competition_ids=competition_ids, seasons=seasons, df_fbref_data=df_fixtures)
 
-    task_get_season_calendar >> task_filter_new_game_ids >> task_insert_new_teams >> task_process_batches
+    @task
+    def task_insert_new_teams(df_new_games):
+        return insert_new_teams(df_new_games)
+
+    @task
+    def task_insert_games_and_reports(df_new_games):
+        return insert_games_and_reports(df_new_games)
+
+    # Define task dependencies
+    fixtures = task_get_fixtures(competition_ids, seasons, max_gameweek)
+    new_games = task_filter_new_games(competition_ids, seasons, fixtures)
+    task_insert_new_teams(new_games)
+    task_insert_games_and_reports(new_games)
+
+dag_instance = dag_update_premier_league_data()

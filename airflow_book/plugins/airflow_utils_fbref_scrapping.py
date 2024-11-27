@@ -1,28 +1,19 @@
-from airflow.operators.python_operator import PythonOperator
 from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_insert_new_teams, \
                                 fn_generate_game_reports, fn_insert_games_and_game_reports
 
-def get_fixtures(**kwargs):
-    competition_ids = kwargs['competition_ids']
-    seasons = kwargs['seasons']
-    max_gameweek = kwargs.get('max_gameweek', None)
+def get_fixtures(competition_ids, seasons, max_gameweek):
     df_fbref_data = fn_get_season_calendar(competition_ids, seasons, max_gameweek)
-    kwargs['ti'].xcom_push(key='df_fbref_data', value=df_fbref_data)
+    return df_fbref_data
 
-def filter_new_games(**kwargs):
-    competition_ids = kwargs['competition_ids']
-    seasons = kwargs['seasons']
-    df_fbref_data = kwargs['ti'].xcom_pull(key='df_fbref_data', task_ids='get_season_calendar')
+def filter_new_games(competition_ids, seasons, df_fbref_data):
     df_games_db = fn_get_database_game_ids(competition_ids, seasons)
     df_new_games = fn_compare_id(df_games_db, df_fbref_data)
-    kwargs['ti'].xcom_push(key='df_new_games', value=df_new_games)
+    return df_new_games
 
-def insert_new_teams(**kwargs):
-    df_new_games = kwargs['ti'].xcom_pull(key='df_new_games', task_ids='get_database_game_ids')
+def insert_new_teams(df_new_games):
     fn_insert_new_teams(df_new_games)
 
-def insert_games_and_reports(**kwargs):
-    df_new_games = kwargs['ti'].xcom_pull(key='df_new_games', task_ids='get_database_game_ids')
+def insert_games_and_reports(df_new_games):
     games_per_batch = 10
     total_games = df_new_games.shape[0]
     batch_nb = (total_games + games_per_batch - 1) // games_per_batch
@@ -36,4 +27,6 @@ def insert_games_and_reports(**kwargs):
         df_new_game_reports = fn_generate_game_reports(batch_df)
         fn_insert_games_and_game_reports(batch_df, df_new_game_reports)
         print(f'Batch {batch_index + 1}/{batch_nb} inserted.')
+
+    return f'All {total_games} games and game reports inserted.'
 
