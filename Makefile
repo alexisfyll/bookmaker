@@ -41,6 +41,13 @@ count_lines:
         '{printf "%4s %s\n", $$1, $$2}{s+=$$0}END{print s}'
 	@echo ''
 
+docker_up:
+	@docker compose up -d
+
+docker_stop:
+	@docker ps -q | xargs -r docker stop
+
+
 # ----------------------------------
 #      UPLOAD PACKAGE TO PYPI
 # ----------------------------------

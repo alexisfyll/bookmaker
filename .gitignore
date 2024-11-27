@@ -10,5 +10,4 @@ raw_data/
 notebooks/
 
 # Airflow
-airflow/logs/
-airflow/config/
+airflow_book/logs/

@@ -44,12 +44,9 @@
 #
 # Feel free to modify this file to suit your needs.
 ---
+
 x-airflow-common:
   &airflow-common
-  # In order to add custom dependencies or upgrade provider packages you can use your extended image.
-  # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
-  # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
-  # image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.10.3}
   build: .
   environment:
     &airflow-common-env
@@ -59,8 +56,10 @@ x-airflow-common:
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+    GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/config/bookmaker-service_account.json
+    PROJECT_ID: ${PROJECT_ID}
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
     # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
@@ -71,12 +70,14 @@ x-airflow-common:
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
     # The following line can be used to set a custom config file, stored in the local config folder
     # If you want to use it, outcomment it and replace airflow.cfg with the name of your config file
-    # AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
+    AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
-    - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
-    - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
-    - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
-    - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+    - ./airflow_book/dags:/opt/airflow/dags
+    - ./airflow_book/logs:/opt/airflow/logs
+    - ./airflow_book/config:/opt/airflow/config
+    - ./airflow_book/plugins:/opt/airflow/plugins
+    - /Users/alexisfayolle/code/.config/bookmaker/bookmaker-service_account.json:/opt/airflow/config/bookmaker-service_account.json # To mount the google credentials to the container
+
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
@@ -149,7 +150,7 @@ services:
 
   airflow-worker:
     <<: *airflow-common
-    command: celery worker
+    command: airflow celery worker
     healthcheck:
       # yamllint disable rule:line-length
       test:
@@ -247,7 +248,7 @@ services:
       _PIP_ADDITIONAL_REQUIREMENTS: ''
     user: "0:0"
     volumes:
-      - ${AIRFLOW_PROJ_DIR:-.}:/sources
+      - ./airflow_book:/sources
 
   airflow-cli:
     <<: *airflow-common

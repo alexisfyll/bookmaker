@@ -4,10 +4,17 @@ setuptools>=26
 twine
 wheel>=0.29
 
-# data science
+# data
 numpy
 pandas
-scikit-learn
+pandas_gbq
+python-dotenv
+google-cloud-bigquery
+
+
+# Scrapping
+requests
+bs4
 
 # tests/linter
 black
@@ -16,14 +23,3 @@ flake8
 pytest
 yapf
 
-# API
-gcsfs
-google-cloud-storage
-mlflow
-s3fs
-
-# utilities
-six>=1.14
-joblib
-memoized-property
-termcolor
