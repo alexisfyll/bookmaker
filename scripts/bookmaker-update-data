@@ -2,6 +2,7 @@
 import sys
 import re
 from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, fn_insert_games_and_game_reports, fn_insert_new_teams
+from datetime import datetime
 
 def validate_competition_ids(competition_ids):
     try:
@@ -29,9 +30,15 @@ def main(competition_ids, seasons, max_gameweek):
     competition_ids = validate_competition_ids(competition_ids)
     seasons = validate_seasons(seasons)
     max_gameweek = validate_max_gameweek(max_gameweek)
+
+    print(f'Program executed at: {datetime.now().strftime("%H:%M:%S")}')
     
     # Get the seasons calendars from FBref
-    df_fbref_data = fn_get_season_calendar(competition_ids, seasons, max_gameweek)
+    if max_gameweek is None:
+        df_fbref_data = fn_get_season_calendar(competition_ids, seasons)
+    else:
+        df_fbref_data = fn_get_season_calendar(competition_ids, seasons, max_gameweek)
+    
     print(f'Calendars scrapped.')
     
     # Get the corresponding games from the database
@@ -65,6 +72,7 @@ def main(competition_ids, seasons, max_gameweek):
         print(f'Batch {batch_index + 1}/{batch_nb} inserted.')
 
     message = 'All imports successfully completed'
+    print(f'Program finished at: {datetime.now().strftime("%H:%M:%S")}')
     print(message)
     return(message)
 
