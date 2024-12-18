@@ -228,20 +228,22 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
             raise AttributeError("keeper_stats not found")
         
         try:
+            dict_report['shots_on_target_against'] = 0
+            dict_report['goals_against'] = 0
+            dict_report['gk_saves'] = 0
+            dict_report['gk_psxg'] = 0
+
+
             for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_shots_on_target_against'}):
-                dict_report['shots_on_target_against'] = 0
                 dict_report['shots_on_target_against'] += 0 if stat.string is None else int(stat.string)
             
             for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_goals_against'}):
-                dict_report['goals_against'] = 0
                 dict_report['goals_against'] += 0 if stat.string is None else int(stat.string)
 
             for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_saves'}):
-                dict_report['gk_saves'] = 0
                 dict_report['gk_saves'] += 0 if stat.string is None else int(stat.string)
             
             for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_psxg'}):
-                dict_report['gk_psxg'] = 0
                 dict_report['gk_psxg'] += 0 if stat.string is None else float(stat.string)
 
 
