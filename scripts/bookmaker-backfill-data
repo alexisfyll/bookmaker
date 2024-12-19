@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+import sys
+import re
+import time
+from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, fn_insert_games_and_game_reports, fn_insert_new_teams
+from datetime import datetime
+
+def main(competition_ids, seasons, max_gameweek=None):
+    # Validate parameters
+    print(f'Program executed at: {datetime.now().strftime("%H:%M:%S")}')
+    
+    # Get the seasons calendars from FBref
+    if max_gameweek is None:
+        df_fbref_data = fn_get_season_calendar(competition_ids, seasons)
+    else:
+        df_fbref_data = fn_get_season_calendar(competition_ids, seasons, max_gameweek)
+    
+    print(f'Calendars scrapped.')
+    
+    # Get the corresponding games from the database
+    df_games_db = fn_get_database_game_ids(competition_ids, seasons)
+
+    # Check if there are new games
+    df_new_games = fn_compare_id(df_games_db, df_fbref_data)
+
+    if df_new_games.empty:
+        print('No new game to insert.')
+        return
+    else:
+        print(f'{df_new_games.shape[0]} new games to insert')
+
+    # Create new teams if necessary
+    fn_insert_new_teams(df_new_games)
+
+    # Generation and imports by batches of 10 games to avoid timeout
+    games_per_batch = 10
+    total_games = df_new_games.shape[0]
+    batch_nb = (total_games + games_per_batch - 1) // games_per_batch  # Calculate the number of batches
+
+    for batch_index in range(batch_nb):
+        start_index = batch_index * games_per_batch
+        end_index = min(start_index + games_per_batch, total_games)
+        batch_df = df_new_games[start_index:end_index]
+        
+        print(f'Processing batch {batch_index + 1}/{batch_nb}.')
+        df_new_game_reports = fn_generate_game_reports(batch_df)
+        fn_insert_games_and_game_reports(batch_df, df_new_game_reports)
+        print(f'Batch {batch_index + 1}/{batch_nb} inserted.')
+
+        # Make a pause every 10 batches
+        if batch_index % 10 == 0:
+            print(f'Waiting 50 minutes before next batch: {datetime.now().strftime("%H:%M:%S")}')
+            time.sleep(3000)
+
+    message = 'All imports successfully completed'
+    print(f'Program finished at: {datetime.now().strftime("%H:%M:%S")}')
+    print(message)
+    return(message)
+
+if __name__ == "__main__":
+    # Make competitions and seasons as list
+    competition_ids = ['9', '12']
+    seasons = ['2020-2021']
+
+    main(competition_ids, seasons)
