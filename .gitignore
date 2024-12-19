@@ -9,6 +9,7 @@ raw_data/
 .python-version
 notebooks/
 build/
+.vscode
 
 # Airflow
 airflow_book/logs/
