@@ -62,6 +62,6 @@ def main(competition_ids, seasons, max_gameweek=None):
 if __name__ == "__main__":
     # Make competitions and seasons as list
     competition_ids = [9, 12]
-    seasons = ['2021-2022']
+    seasons = ['2020-2021', '2021-2022']
 
     main(competition_ids, seasons)
