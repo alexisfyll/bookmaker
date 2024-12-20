@@ -8,7 +8,7 @@ from datetime import datetime
 def main(competition_ids, seasons, max_gameweek=None):
     # Validate parameters
     print(f'Program executed at: {datetime.now().strftime("%H:%M:%S")}')
-    
+
     # Get the seasons calendars from FBref
     if max_gameweek is None:
         df_fbref_data = fn_get_season_calendar(competition_ids, seasons)
@@ -37,6 +37,7 @@ def main(competition_ids, seasons, max_gameweek=None):
     total_games = df_new_games.shape[0]
     batch_nb = (total_games + games_per_batch - 1) // games_per_batch  # Calculate the number of batches
 
+
     for batch_index in range(batch_nb):
         start_index = batch_index * games_per_batch
         end_index = min(start_index + games_per_batch, total_games)
@@ -48,9 +49,10 @@ def main(competition_ids, seasons, max_gameweek=None):
         print(f'Batch {batch_index + 1}/{batch_nb} inserted.')
 
         # Make a pause every 10 batches
-        if (batch_index+1) % 10 == 0:
-            print(f'Waiting 50 minutes before next batch: {datetime.now().strftime("%H:%M:%S")}')
-            time.sleep(3000)
+        if (batch_index+1) % 5 == 0:
+            t = 1200
+            print(f'Waiting {t//60} minutes before next batch: {datetime.now().strftime("%H:%M:%S")}')
+            time.sleep(t)
 
     message = 'All imports successfully completed'
     print(f'Program finished at: {datetime.now().strftime("%H:%M:%S")}')
@@ -60,6 +62,6 @@ def main(competition_ids, seasons, max_gameweek=None):
 if __name__ == "__main__":
     # Make competitions and seasons as list
     competition_ids = [9, 12]
-    seasons = ['2020-2021']
+    seasons = ['2021-2022']
 
     main(competition_ids, seasons)
