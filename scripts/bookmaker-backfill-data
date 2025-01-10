@@ -49,8 +49,8 @@ def main(competition_ids, seasons, max_gameweek=None):
         print(f'Batch {batch_index + 1}/{batch_nb} inserted.')
 
         # Make a pause every 10 batches
-        if (batch_index+1) % 5 == 0:
-            t = 1200
+        if (batch_index+1) % 7 == 0:
+            t = 1500
             print(f'Waiting {t//60} minutes before next batch: {datetime.now().strftime("%H:%M:%S")}')
             time.sleep(t)
 
@@ -61,7 +61,7 @@ def main(competition_ids, seasons, max_gameweek=None):
 
 if __name__ == "__main__":
     # Make competitions and seasons as list
-    competition_ids = [9, 12]
-    seasons = ['2020-2021', '2021-2022']
+    competition_ids = [13]
+    seasons = ['2022-2023']
 
     main(competition_ids, seasons)
