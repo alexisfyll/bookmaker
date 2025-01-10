@@ -10,7 +10,7 @@ def dag_update_premier_league_data():
 
     competition_ids = [9]
     seasons = ['2023-2024']
-    max_gameweek = 21    
+    max_gameweek = 21
 
     @task
     def task_get_fixtures(competition_ids, seasons, max_gameweek):

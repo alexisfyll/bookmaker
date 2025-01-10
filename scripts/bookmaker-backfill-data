@@ -1,38 +1,14 @@
 #!/usr/bin/env python3
 import sys
 import re
+import time
 from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, fn_insert_games_and_game_reports, fn_insert_new_teams
 from datetime import datetime
 
-def validate_competition_ids(competition_ids):
-    try:
-        return [int(id) for id in competition_ids]
-    except ValueError:
-        raise ValueError("Competition IDs must be a list of integers.")
-
-def validate_seasons(seasons):
-    season_pattern = re.compile(r'^\d{4}-\d{4}$')
-    for season in seasons:
-        if not season_pattern.match(season):
-            raise ValueError("Seasons must be in the format 'YYYY-YYYY'.")
-    return seasons
-
-def validate_max_gameweek(max_gameweek):
-    if max_gameweek is not None:
-        try:
-            return int(max_gameweek)
-        except ValueError:
-            raise ValueError("Max gameweek must be an integer.")
-    return None
-
-def main(competition_ids, seasons, max_gameweek):
+def main(competition_ids, seasons, max_gameweek=None):
     # Validate parameters
-    competition_ids = validate_competition_ids(competition_ids)
-    seasons = validate_seasons(seasons)
-    max_gameweek = validate_max_gameweek(max_gameweek)
-
     print(f'Program executed at: {datetime.now().strftime("%H:%M:%S")}')
-    
+
     # Get the seasons calendars from FBref
     if max_gameweek is None:
         df_fbref_data = fn_get_season_calendar(competition_ids, seasons)
@@ -61,6 +37,7 @@ def main(competition_ids, seasons, max_gameweek):
     total_games = df_new_games.shape[0]
     batch_nb = (total_games + games_per_batch - 1) // games_per_batch  # Calculate the number of batches
 
+
     for batch_index in range(batch_nb):
         start_index = batch_index * games_per_batch
         end_index = min(start_index + games_per_batch, total_games)
@@ -71,6 +48,12 @@ def main(competition_ids, seasons, max_gameweek):
         fn_insert_games_and_game_reports(batch_df, df_new_game_reports)
         print(f'Batch {batch_index + 1}/{batch_nb} inserted.')
 
+        # Make a pause every 10 batches
+        if (batch_index+1) % 7 == 0:
+            t = 1500
+            print(f'Waiting {t//60} minutes before next batch: {datetime.now().strftime("%H:%M:%S")}')
+            time.sleep(t)
+
     message = 'All imports successfully completed'
     print(f'Program finished at: {datetime.now().strftime("%H:%M:%S")}')
     print(message)
@@ -78,8 +61,7 @@ def main(competition_ids, seasons, max_gameweek):
 
 if __name__ == "__main__":
     # Make competitions and seasons as list
-    competition_ids = sys.argv[1].split(',')
-    seasons = sys.argv[2].split(',')
-    max_gameweek = sys.argv[3] if len(sys.argv) > 3 else None
+    competition_ids = [13]
+    seasons = ['2022-2023']
 
-    main(competition_ids, seasons, max_gameweek)
+    main(competition_ids, seasons)

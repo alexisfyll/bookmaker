@@ -14,9 +14,6 @@ test:
 	@coverage run -m pytest tests/*.py
 	@coverage report -m --omit="${VIRTUAL_ENV}/lib/python*"
 
-ftest:
-	@Write me
-
 clean:
 	@rm -f */version.txt
 	@rm -f .coverage
@@ -47,16 +44,3 @@ docker_up:
 docker_stop:
 	@docker ps -q | xargs -r docker stop
 
-
-# ----------------------------------
-#      UPLOAD PACKAGE TO PYPI
-# ----------------------------------
-PYPI_USERNAME=<AUTHOR>
-build:
-	@python setup.py sdist bdist_wheel
-
-pypi_test:
-	@twine upload -r testpypi dist/* -u $(PYPI_USERNAME)
-
-pypi:
-	@twine upload dist/* -u $(PYPI_USERNAME)

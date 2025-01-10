@@ -121,10 +121,19 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
     home_poss = float(str_home_poss.strip('%')) / 100
     df_output = pd.DataFrame()
 
+    # Get correct score
+    score = []
+    for sc in soup.find('div', {'class': 'scorebox'}).find_all('div', {'class': 'score'}):
+        score.append(sc.string)
+
     for team_id in [home_team_id, away_team_id]:
         dict_report = {'id': game_id + '_' + team_id,
                        'game_id': game_id,
                        'team_id': team_id }
+
+        # Goals         
+        dict_report['goals'] = int(score[0 if team_id==home_team_id else 1])
+        dict_report['goals_against'] = int(score[1 if team_id==home_team_id else 0])
 
         # Get location and possession
         if team_id==home_team_id:
@@ -135,13 +144,11 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
             dict_report['possession'] = (1-home_poss)
 
         # General stats
-        # tag_general_stats = f'stats_{team_id}_summary'
         general_stats = soup.find(id=f'stats_{team_id}_summary').find('tfoot')
         if general_stats is None:
             print(f"general_stats not found for game_id {game_id} and team_id {team_id}")
             raise AttributeError("general_stats not found")
 
-        dict_report['goals'] = int(general_stats.find("td", attrs={'data-stat': 'goals'}).string)
         dict_report['assists'] = int(general_stats.find("td", attrs={'data-stat': 'assists'}).string)
         dict_report['pens_scored'] = int(general_stats.find("td", attrs={'data-stat': 'pens_made'}).string)
         dict_report['pens_att'] = int(general_stats.find("td", attrs={'data-stat': 'pens_att'}).string)
@@ -228,20 +235,18 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
             raise AttributeError("keeper_stats not found")
         
         try:
+            dict_report['shots_on_target_against'] = 0
+            dict_report['gk_saves'] = 0
+            dict_report['gk_psxg'] = 0
+
+
             for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_shots_on_target_against'}):
-                dict_report['shots_on_target_against'] = 0
                 dict_report['shots_on_target_against'] += 0 if stat.string is None else int(stat.string)
             
-            for stat in keeper_stats.find_all("td", attrs={'data-stat': 'goals_against'}):
-                dict_report['goals_against'] = 0
-                dict_report['goals_against'] += 0 if stat.string is None else int(stat.string)
-
             for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_saves'}):
-                dict_report['gk_saves'] = 0
                 dict_report['gk_saves'] += 0 if stat.string is None else int(stat.string)
             
             for stat in keeper_stats.find_all("td", attrs={'data-stat': 'gk_psxg'}):
-                dict_report['gk_psxg'] = 0
                 dict_report['gk_psxg'] += 0 if stat.string is None else float(stat.string)
 
 
