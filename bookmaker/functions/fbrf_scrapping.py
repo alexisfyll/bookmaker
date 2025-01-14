@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import re
+from io import StringIO
 
 
 def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=100):
@@ -99,7 +100,7 @@ def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=
 
 
 
-def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
+def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str, proxy: str = None):
     """
     Function that takes game_id, home_id and away_id to generate game reports for both teams
     """
@@ -107,7 +108,12 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
     game_url = 'https://fbref.com/en/matches/' + game_id
 
     # Initializing parser
-    response = requests.get(game_url)
+    if proxy is not None:
+        param_proxy = {'http': proxy, 'https': proxy}
+        response = requests.get(game_url, proxies=param_proxy)
+    else:    
+        response = requests.get(game_url)
+        
     soup = BeautifulSoup(response.content, "html.parser")
 
     # Way to get home possession
@@ -259,3 +265,32 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str):
         df_output = pd.concat([df_output, pd.DataFrame([dict_report])], ignore_index=True)
 
     return df_output
+
+
+def get_proxy(url: str = 'https://fbref.com/en/matches/'):
+    # Free proxies
+    response = requests.get('https://free-proxy-list.net/') 
+    html_content = StringIO(response.text)
+    df_p = pd.read_html(html_content)[0]
+    
+    # Keep most 100 recent ip with https
+    df_p = df_p[df_p['Https']=='yes'].head(100).reset_index(drop=True)
+    df_p['proxy'] = 'http://' + df_p['IP Address'] + ':' + df_p['Port'].astype(str)
+    
+    # Store in list
+    proxies = df_p['proxy'].tolist()
+
+    # Loop to find a working proxy
+    for p in proxies:
+        try:
+            response = requests.get(url, proxies={"http": p, "https": p})
+            if response.status_code == 200:
+                print ('Proxy is working:', p)
+                return p
+        except:
+            pass
+    
+    print ('No working proxy found')
+    return None
+                
+    

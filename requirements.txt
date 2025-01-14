@@ -10,7 +10,7 @@ pandas
 pandas_gbq
 python-dotenv
 google-cloud-bigquery
-
+scikit-learn==1.5.1
 
 # Scrapping
 requests

@@ -59,7 +59,7 @@ def fn_get_database_game_ids(competitions_ids: list, seasons: list):
     return read_gbq(query, project_id=project_id)
 
 
-def fn_generate_game_reports(df_new_games: pd.DataFrame):
+def fn_generate_game_reports(df_new_games: pd.DataFrame, proxy: str = None):
     """
     Generate the game_reports rows for the new games scrapped.
 
@@ -73,10 +73,10 @@ def fn_generate_game_reports(df_new_games: pd.DataFrame):
     df_game_reports = pd.DataFrame()
     for i in range (df_new_games.shape[0]):
         if i>0:
-            delay = random.uniform(3, 7)  # Random delay between 4-6 seconds
+            delay = random.uniform(3, 7)  # Random delay between 3-7 seconds
             time.sleep(delay)
 
-        df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i])
+        df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i], proxy=proxy)
         df_game_reports = pd.concat([df_game_reports, df_temp], ignore_index=True)  
 
     return df_game_reports
