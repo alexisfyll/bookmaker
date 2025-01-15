@@ -3,6 +3,8 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from io import StringIO
+from datetime import datetime
+
 
 
 def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=100):
@@ -109,9 +111,12 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str, proxy
 
     # Initializing parser
     if proxy is not None:
-        param_proxy = {'http': proxy, 'https': proxy}
-        response = requests.get(game_url, proxies=param_proxy)
-    else:    
+        try:
+            response = requests.get(game_url, proxies={'http': proxy, 'https': proxy}, timeout=30)
+        except (TimeoutError, ConnectionError, requests.exceptions.RequestException) as e: # TODO : Error to be adressed outside this function -> fn_generate_game_reports
+            print(f"{e} error. Trying again without proxy.")
+            response = requests.get(game_url)
+    else:
         response = requests.get(game_url)
         
     soup = BeautifulSoup(response.content, "html.parser")
@@ -273,14 +278,15 @@ def get_proxy(url: str = 'https://fbref.com/en/matches/'):
     html_content = StringIO(response.text)
     df_p = pd.read_html(html_content)[0]
     
-    # Keep most 100 recent ip with https
-    df_p = df_p[df_p['Https']=='yes'].head(100).reset_index(drop=True)
+    # Keep most 25 recent ip with https
+    df_p = df_p[df_p['Https']=='yes'].head(25).reset_index(drop=True)
     df_p['proxy'] = 'http://' + df_p['IP Address'] + ':' + df_p['Port'].astype(str)
     
     # Store in list
     proxies = df_p['proxy'].tolist()
 
     # Loop to find a working proxy
+    print(f'Looking for a working proxy at {datetime.now().strftime("%H:%M:%S")}')
     for p in proxies:
         try:
             response = requests.get(url, proxies={"http": p, "https": p})

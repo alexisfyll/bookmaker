@@ -39,10 +39,6 @@ def main(competition_ids, seasons, max_gameweek=None):
 
     # Loop over the batches
     for batch_index in range(batch_nb):
-        # get proxy
-        # proxy = get_proxy()
-        proxy = None
-
         # Extract the batch of games
         start_index = batch_index * games_per_batch
         end_index = min(start_index + games_per_batch, total_games)
@@ -51,6 +47,9 @@ def main(competition_ids, seasons, max_gameweek=None):
         # Processing the batch
         print(f'Processing batch {batch_index + 1}/{batch_nb}.')
         start_time = time.time()
+
+        # Get a proxy
+        proxy = get_proxy()
         
         # Generate and insert the games and game reports
         df_new_game_reports = fn_generate_game_reports(batch_df, proxy=proxy)

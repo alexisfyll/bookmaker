@@ -71,12 +71,23 @@ def fn_generate_game_reports(df_new_games: pd.DataFrame, proxy: str = None):
 
     """
     df_game_reports = pd.DataFrame()
+
+    # Loop over games to get the game reports
     for i in range (df_new_games.shape[0]):
-        if i>0:
+        # Apply a random delay if no proxy used
+        if i>0 and proxy is None: 
             delay = random.uniform(3, 7)  # Random delay between 3-7 seconds
             time.sleep(delay)
 
-        df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i], proxy=proxy)
+        try:
+            df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i], proxy=proxy)
+        except (TimeoutError): #ProxyError to be addressed ?
+            print("Proxy Error. Trying again without proxy.")
+            proxy = None # Remove proxy
+            df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i], proxy=proxy)
+        
+        print(f"Game {i+1} out of {df_new_games.shape[0]} scrapped for current batch.")
+
         df_game_reports = pd.concat([df_game_reports, df_temp], ignore_index=True)  
 
     return df_game_reports
