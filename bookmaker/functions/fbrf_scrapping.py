@@ -20,7 +20,7 @@ def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=
 
             # Initializing parser
             response = requests.get(url)
-            soup = BeautifulSoup(response.content, "html.parser")
+            soup = BeautifulSoup(response.content, "html5lib")
 
             # Read table with pandas
             df_temp = pd.read_html(url, 

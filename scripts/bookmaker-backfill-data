@@ -43,7 +43,7 @@ def main(competition_ids, seasons, max_gameweek=None):
         # proxy = get_proxy()
         proxy = None
 
-        # Get the batch
+        # Extract the batch of games
         start_index = batch_index * games_per_batch
         end_index = min(start_index + games_per_batch, total_games)
         batch_df = df_new_games[start_index:end_index]
@@ -62,12 +62,12 @@ def main(competition_ids, seasons, max_gameweek=None):
         elapsed_minutes, elapsed_seconds = divmod(elapsed_time, 60)
         print(f'Batch {batch_index + 1}/{batch_nb} inserted in {int(elapsed_minutes):02d}:{int(elapsed_seconds):02d} minutes.')
 
-        """# Make a pause every 10 batches
-        if (batch_index+1) % 7 == 0:
+        # Make a pause every 10 batches
+        if (batch_index+1) % 7 == 0 and proxy is None:
             t = 1500
             print(f'Waiting {t//60} minutes before next batch: {datetime.now().strftime("%H:%M:%S")}')
             time.sleep(t)
-        """
+        
 
     message = 'All imports successfully completed'
     print(f'Program finished at: {datetime.now().strftime("%H:%M:%S")}')
