@@ -1,7 +1,7 @@
 import pandas as pd
 from pandas_gbq import read_gbq, to_gbq
 from dotenv import load_dotenv
-from bookmaker.functions import fn_get_game_report
+from bookmaker.functions import fn_get_game_report, ScrappingError
 import random
 import os
 import time
@@ -74,6 +74,7 @@ def fn_generate_game_reports(df_new_games: pd.DataFrame, proxy: str = None):
 
     # Loop over games to get the game reports
     for i in range (df_new_games.shape[0]):
+        
         # Apply a random delay if no proxy used
         if i>0 and proxy is None: 
             delay = random.uniform(3, 7)  # Random delay between 3-7 seconds
@@ -81,13 +82,13 @@ def fn_generate_game_reports(df_new_games: pd.DataFrame, proxy: str = None):
 
         try:
             df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i], proxy=proxy)
-        except (TimeoutError): #ProxyError to be addressed ?
-            print("Proxy Error. Trying again without proxy.")
-            proxy = None # Remove proxy
-            df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i], proxy=proxy)
-        
-        print(f"Game {i+1} out of {df_new_games.shape[0]} scrapped for current batch.")
+            print(f"Game {i+1} out of {df_new_games.shape[0]} scrapped for current batch with proxy.")
 
+        except ScrappingError as e:
+            df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i])
+            print(f"Game {i+1} out of {df_new_games.shape[0]} scrapped for current batch without proxy.")
+        
+        # Concatenate the new game reports to the existing ones
         df_game_reports = pd.concat([df_game_reports, df_temp], ignore_index=True)  
 
     return df_game_reports

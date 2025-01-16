@@ -5,6 +5,9 @@ import re
 from io import StringIO
 from datetime import datetime
 
+class ScrappingError(Exception):
+    """Custom exception for scrapping errors"""
+    pass
 
 
 def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=100):
@@ -113,9 +116,8 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str, proxy
     if proxy is not None:
         try:
             response = requests.get(game_url, proxies={'http': proxy, 'https': proxy}, timeout=30)
-        except (TimeoutError, ConnectionError, requests.exceptions.RequestException) as e: # TODO : Error to be adressed outside this function -> fn_generate_game_reports
-            print(f"{e} error. Trying again without proxy.")
-            response = requests.get(game_url)
+        except (TimeoutError, ConnectionError, requests.exceptions.RequestException) as e: 
+            raise ScrappingError(f"Error in request with proxy {proxy}")
     else:
         response = requests.get(game_url)
         
@@ -278,8 +280,8 @@ def get_proxy(url: str = 'https://fbref.com/en/matches/'):
     html_content = StringIO(response.text)
     df_p = pd.read_html(html_content)[0]
     
-    # Keep most 25 recent ip with https
-    df_p = df_p[df_p['Https']=='yes'].head(25).reset_index(drop=True)
+    # Keep 50 most recent ip with https
+    df_p = df_p[df_p['Https']=='yes'].head(50).reset_index(drop=True)
     df_p['proxy'] = 'http://' + df_p['IP Address'] + ':' + df_p['Port'].astype(str)
     
     # Store in list
@@ -289,7 +291,7 @@ def get_proxy(url: str = 'https://fbref.com/en/matches/'):
     print(f'Looking for a working proxy at {datetime.now().strftime("%H:%M:%S")}')
     for p in proxies:
         try:
-            response = requests.get(url, proxies={"http": p, "https": p})
+            response = requests.get(url, proxies={"http": p, "https": p}, timeout=10)
             if response.status_code == 200:
                 print ('Proxy is working:', p)
                 return p
