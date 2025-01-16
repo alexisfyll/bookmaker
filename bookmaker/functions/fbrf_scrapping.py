@@ -125,13 +125,15 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str, proxy
 
     # Way to get home possession
     team_stats = soup.find(id='team_stats')
+    try:
+        str_home_poss = team_stats.find('td').find('div').find('div').string
+        home_poss = float(str_home_poss.strip('%')) / 100 
     
-    if team_stats is None:
-        print(f"team_stats not found for game_id: {game_id}")
-        raise AttributeError("team_stats not found")
+    except AttributeError as e:
+        print(f"Impossible to get possession for game_id: {game_id}")
+        raise AttributeError(f"AttributeError: {e}")
 
-    str_home_poss = team_stats.find('td').find('div').find('div').string
-    home_poss = float(str_home_poss.strip('%')) / 100
+
     df_output = pd.DataFrame()
 
     # Get correct score
