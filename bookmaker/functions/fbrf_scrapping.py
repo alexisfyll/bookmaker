@@ -10,7 +10,7 @@ class ScrappingError(Exception):
     pass
 
 
-def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=100):
+def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=100, proxy: str = None):
     """
     Function that returns the fixtures of a season of a competition
     Takes as input the competition id and the season in the format 'yyyy-yyyy' or 'yyyy'
@@ -24,17 +24,26 @@ def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=
             url = f'https://fbref.com/en/comps/{competition_id}/{season}/schedule/'
 
             # Initializing parser
-            response = requests.get(url)
-            soup = BeautifulSoup(response.content, "html5lib")
+            if proxy is not None:
+                try:
+                    response = requests.get(url, proxies={'http': proxy, 'https': proxy}, timeout=30)
+                except (TimeoutError, ConnectionError, requests.exceptions.RequestException) as e: 
+                    raise ScrappingError(f"Error in request with proxy {proxy}. Error: {e}")
+            else:
+                response = requests.get(url)
 
             # Read table with pandas
-            df_temp = pd.read_html(url, 
-                            attrs={"id":f"sched_{season}_{competition_id}_1"}
-                            )
-            df_fixtures = df_temp[0].dropna(how='all').reset_index(drop=True)
+            try:
+                df_temp = pd.read_html(StringIO(response.text), 
+                                attrs={"id":f"sched_{season}_{competition_id}_1"}
+                                )
+                df_fixtures = df_temp[0].dropna(how='all').reset_index(drop=True)
+            except ValueError as e:
+                raise ValueError(f'{e} for competition_id {competition_id} and season {season}')
 
             # Table cleaning
-            df_fixtures = df_fixtures[['Wk', 'Date', 'Home', 'Score', 'Away']]
+            mask_completed_games = (df_fixtures['Match Report'] == 'Match Report') & (df_fixtures['Notes'].isnull()) # To exclude extraordinary events (Match cancelled, forfeit, etc..)
+            df_fixtures = df_fixtures[mask_completed_games][['Wk', 'Date', 'Home', 'Score', 'Away']] 
             df_fixtures.rename(columns={'Wk': 'gameweek',
                                     'Date': 'date',
                                     'Home': 'home_team',
@@ -45,6 +54,7 @@ def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=
             
 
             # Get the fixtures table html code to extract the game & teams ids
+            soup = BeautifulSoup(response.content, "html.parser")
             table = soup.find(id=f'sched_{season}_{competition_id}_1').find("tbody")
 
             game_ids = []
@@ -57,6 +67,12 @@ def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=
             for game in table.find_all("tr"):
                 # Skip rows with spacer
                 if ("spacer" in game.get('class', []) and "partial_table" in game.get('class', []) and "result_all" in game.get('class', [])): 
+                    continue
+                # Skip rows with extraordinary events
+                elif game.find('td', class_='left', attrs={'data-stat': 'notes'}).string is not None:
+                    continue
+                # Skip of matches not played yet
+                elif game.find('td', class_='left', attrs={'data-stat': 'match_report'}).find('a').string != 'Match Report':
                     continue
 
                 # Extract match report / home / away URLs

@@ -2,19 +2,28 @@
 import sys
 import re
 import time
-from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, fn_insert_games_and_game_reports, fn_insert_new_teams, get_proxy
+from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, fn_insert_games_and_game_reports, fn_insert_new_teams, get_proxy, ScrappingError
 from datetime import datetime
 
 def main(competition_ids, seasons, max_gameweek=None):
     # Validate parameters
     print(f'Program executed at: {datetime.now().strftime("%H:%M:%S")}')
 
-    # Get the seasons calendars from FBref
     if max_gameweek is None:
-        df_fbref_data = fn_get_season_calendar(competition_ids, seasons)
-    else:
-        df_fbref_data = fn_get_season_calendar(competition_ids, seasons, max_gameweek)
+        max_gameweek = 100
     
+    # Get a proxy for the first request
+    proxy = get_proxy()
+    
+    # Get the seasons calendars from FBref
+    try:
+        df_fbref_data = fn_get_season_calendar(competition_ids, seasons, max_gameweek=max_gameweek, proxy=proxy)
+    
+    except ScrappingError as e:
+        print(f'Trying to get calendars without proxy.')
+        df_fbref_data = fn_get_season_calendar(competition_ids, seasons, max_gameweek=max_gameweek, proxy=None)
+        
+
     print(f'Calendars scrapped.')
     
     # Get the corresponding games from the database
@@ -39,6 +48,11 @@ def main(competition_ids, seasons, max_gameweek=None):
 
     # Loop over the batches
     for batch_index in range(batch_nb):
+        # Make a pause to avoid being blocked
+        if batch_index > 0:
+            print(f'Waiting 60 seconds before processing the next batch.')
+            time.sleep(60)
+
         # Extract the batch of games
         start_index = batch_index * games_per_batch
         end_index = min(start_index + games_per_batch, total_games)
@@ -61,11 +75,6 @@ def main(competition_ids, seasons, max_gameweek=None):
         elapsed_minutes, elapsed_seconds = divmod(elapsed_time, 60)
         print(f'Batch {batch_index + 1}/{batch_nb} inserted in {int(elapsed_minutes):02d}:{int(elapsed_seconds):02d} minutes.')
 
-        # Make a pause every 10 batches
-        if (batch_index+1) % 7 == 0 and proxy is None:
-            t = 1500
-            print(f'Waiting {t//60} minutes before next batch: {datetime.now().strftime("%H:%M:%S")}')
-            time.sleep(t)
         
 
     message = 'All imports successfully completed'
@@ -76,7 +85,7 @@ def main(competition_ids, seasons, max_gameweek=None):
 
 if __name__ == "__main__":
     # Make competitions and seasons as list
-    competition_ids = [11, 9, 12, 13] # 9-PL 11-SerieA 12-LaLiga 13-Ligue1 20-Bundesligua
-    seasons = ['2019-2020']
+    competition_ids = [11, 9, 12, 13, 20] # 9-PL 11-SerieA 12-LaLiga 13-Ligue1 20-Bundesligua
+    seasons = ['2019-2020', '2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025']
 
     main(competition_ids, seasons)
