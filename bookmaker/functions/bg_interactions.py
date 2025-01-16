@@ -88,6 +88,12 @@ def fn_generate_game_reports(df_new_games: pd.DataFrame, proxy: str = None):
             df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i])
             print(f"Game {i+1} out of {df_new_games.shape[0]} scrapped for current batch without proxy.")
         
+        except AttributeError as e:
+            print(f"AttributeError: {e}. Trying again without proxy in 1 minute.")
+            time.sleep(60)
+            df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i])
+            print(f"Game {i+1} out of {df_new_games.shape[0]} scrapped for current batch without proxy.")
+        
         # Concatenate the new game reports to the existing ones
         df_game_reports = pd.concat([df_game_reports, df_temp], ignore_index=True)  
 
