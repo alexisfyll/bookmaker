@@ -10,7 +10,7 @@ class ScrappingError(Exception):
     pass
 
 
-def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=100, proxy: str = None):
+def fn_get_season_calendar(competition_ids: list, seasons: list, max_gameweek: int = None, proxy: str = None):
     """
     Function that returns the fixtures of a season of a competition
     Takes as input the competition id and the season in the format 'yyyy-yyyy' or 'yyyy'
@@ -32,7 +32,7 @@ def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=
             else:
                 response = requests.get(url)
 
-            # Read table with pandas
+            # Get calendar with pandas
             try:
                 df_temp = pd.read_html(StringIO(response.text), 
                                 attrs={"id":f"sched_{season}_{competition_id}_1"}
@@ -53,7 +53,7 @@ def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=
             df_fixtures['date'] = pd.to_datetime(df_fixtures['date'])
             
 
-            # Get the fixtures table html code to extract the game & teams ids
+            # Get the fixtures table html code to extract the game_id & team_id
             soup = BeautifulSoup(response.content, "html.parser")
             table = soup.find(id=f'sched_{season}_{competition_id}_1').find("tbody")
 
@@ -115,7 +115,9 @@ def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=
             # Add season and competition id columns + sorting with the parameter
             df_season_games['season'] = season
             df_season_games['competition_id'] = competition_id
-            df_season_games = df_season_games[df_season_games['gameweek'] <= max_gameweek]
+
+            if max_gameweek is not None:
+                df_season_games = df_season_games[df_season_games['gameweek'] <= max_gameweek]
 
             # Concatenate the different seasons
             df_games = pd.concat([df_games, df_season_games], ignore_index=True)

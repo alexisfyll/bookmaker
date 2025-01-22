@@ -1,4 +1,3 @@
-from airflow import DAG
 from airflow.decorators import task, dag
 from datetime import datetime
 from airflow_book.plugins.airflow_utils_fbref_scrapping import get_fixtures, filter_new_games, insert_new_teams, insert_games_and_reports
