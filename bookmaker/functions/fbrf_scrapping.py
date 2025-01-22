@@ -4,10 +4,7 @@ from bs4 import BeautifulSoup
 import re
 from io import StringIO
 from datetime import datetime
-
-class ScrappingError(Exception):
-    """Custom exception for scrapping errors"""
-    pass
+from .exceptions import ScrappingError
 
 
 def get_proxy(url: str = 'https://fbref.com/en/matches/'):
@@ -36,19 +33,26 @@ def get_proxy(url: str = 'https://fbref.com/en/matches/'):
     
     print ('No working proxy found')
     return None
-                
-    
 
-def fn_get_season_calendar(competition_ids: list, seasons: list, max_gameweek: int = None, proxy: str = None):
+
+def fn_get_seasons_calendars(competition_ids: list, seasons: list, max_gameweek: int = None, use_proxy: bool=True):
     """
     Function that returns the fixtures of a season of a competition
     Takes as input the competition id and the season in the format 'yyyy-yyyy' or 'yyyy'
     """
-    df_games = pd.DataFrame()
+    df_calendars = pd.DataFrame()
+
+    # Get the numbers of competitions and seasons
+    n_calendars = len(competition_ids) * len(seasons)
+    calendar_count = 0
 
     # Loop over the competitions and seasons
     for competition_id in competition_ids:
         for season in seasons:
+            # Scrap with a new proxy every 8 associations
+            if (calendar_count % 8 == 0) and use_proxy == True:
+                proxy = get_proxy()
+            
             # url of season calendar :
             url = f'https://fbref.com/en/comps/{competition_id}/{season}/schedule/'
 
@@ -57,7 +61,9 @@ def fn_get_season_calendar(competition_ids: list, seasons: list, max_gameweek: i
                 try:
                     response = requests.get(url, proxies={'http': proxy, 'https': proxy}, timeout=30)
                 except (TimeoutError, ConnectionError, requests.exceptions.RequestException) as e: 
-                    raise ScrappingError(f"Error in request with proxy {proxy}. Error: {e}")
+                    print(f'Calendar {calendar_count + 1}/{n_calendars} failed with proxy. Trying without proxy.')
+                    response = requests.get(url)
+                    #raise ScrappingError(f"Error in request with proxy {proxy}. Error: {e}")
             else:
                 response = requests.get(url)
 
@@ -149,10 +155,11 @@ def fn_get_season_calendar(competition_ids: list, seasons: list, max_gameweek: i
                 df_season_games = df_season_games[df_season_games['gameweek'] <= max_gameweek]
 
             # Concatenate the different seasons
-            df_games = pd.concat([df_games, df_season_games], ignore_index=True)
+            df_calendars = pd.concat([df_calendars, df_season_games], ignore_index=True)
+            
+            calendar_count += 1
 
-
-    return df_games
+    return df_calendars
 
 
 
