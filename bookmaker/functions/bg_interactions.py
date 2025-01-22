@@ -130,7 +130,6 @@ def fn_insert_new_teams(df_new_games: pd.DataFrame):
     df_new_games (pd.DataFrame): A dataframe containing the new games.
 
     """
-    teams_table='fbref_raw_data.teams'
 
     # get the teams scraped
     df_teams_fbref = pd.concat([
@@ -151,9 +150,10 @@ def fn_insert_new_teams(df_new_games: pd.DataFrame):
         message = "No new team to insert."
         print(message)
         return (message)
+    elif df_new_teams.isnull().any() == True:
+        raise ScrappingError("Error while scrapping with null value in teams.")
     
     teams_table='fbref_raw_data.teams'
-
     to_gbq(df_new_teams, teams_table, project_id=project_id, if_exists='append')
     
     message = f"{df_new_teams.shape[0]} new teams inserted successfully."
