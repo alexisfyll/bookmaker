@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import re
-from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, fn_insert_games_and_game_reports, fn_insert_new_teams
+from bookmaker.functions import fn_get_seasons_calendars, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, fn_insert_games_and_game_reports, fn_insert_new_teams
 from datetime import datetime
 
 def validate_competition_ids(competition_ids):
@@ -25,6 +25,7 @@ def validate_max_gameweek(max_gameweek):
             raise ValueError("Max gameweek must be an integer.")
     return None
 
+"""
 def main(competition_ids, seasons, max_gameweek):
     # Validate parameters
     competition_ids = validate_competition_ids(competition_ids)
@@ -74,7 +75,7 @@ def main(competition_ids, seasons, max_gameweek):
     message = 'All imports successfully completed'
     print(f'Program finished at: {datetime.now().strftime("%H:%M:%S")}')
     print(message)
-    return(message)
+    return(message)"""
 
 if __name__ == "__main__":
     # Make competitions and seasons as list

@@ -1,25 +1,21 @@
 #!/usr/bin/env python3
 
-import sys
 import pandas as pd
-import re
-import time
 from bookmaker.functions import (
     fn_get_seasons_calendars,
     fn_get_database_game_ids,
     fn_compare_id,
-    fn_generate_game_reports,
-    fn_insert_games_and_game_reports,
-    fn_insert_new_teams,
-    get_proxy
+    fn_batch_scrapping_insert,
+    fn_insert_new_teams
 )
 from datetime import datetime
 
 def main(competition_ids: list, seasons: list, max_gameweek: int = None):
-    # Validate parameters
+    
     print(f'Program executed at: {datetime.now().strftime("%H:%M:%S")}')
 
-    df_fbref_data = fn_get_seasons_calendars(competition_ids=competition_ids, seasons=seasons, use_proxy=True)
+    # Calendars scrapping
+    df_fbref_data = fn_get_seasons_calendars(competition_ids=competition_ids, seasons=seasons, max_gameweek=max_gameweek, use_proxy=True)
     print(f'Calendars successfully scrapped.')
     
     # Get the corresponding games from the database
@@ -27,56 +23,21 @@ def main(competition_ids: list, seasons: list, max_gameweek: int = None):
 
     # Check if there are new games
     df_new_games = fn_compare_id(df_games_db, df_fbref_data)
-
     if df_new_games.empty:
-        print('No new game to insert.')
-        return
+        message = 'No new game to insert.'
+        print(message)
+        return message
     else:
-        print(f'{df_new_games.shape[0]} new games to insert')
-
+        print(f'{df_new_games.shape[0]} new game(s) to insert')
+    
     # Create new teams if necessary
     fn_insert_new_teams(df_new_games)
 
-    # Generation and imports by batches of 10 games to avoid timeout
-    games_per_batch = 10
-    total_games = df_new_games.shape[0]
-    batch_nb = (total_games + games_per_batch - 1) // games_per_batch  # Calculate the number of batches
+    # Get and insert games & game_reports
+    fn_batch_scrapping_insert(df_new_games)
 
-    # Loop over the batches
-    for batch_index in range(batch_nb):
-        # Make a pause to avoid being blocked
-        if batch_index > 0:
-            print(f'Waiting 30 seconds before processing the next batch.')
-            time.sleep(30)
-
-        # Extract the batch of games
-        start_index = batch_index * games_per_batch
-        end_index = min(start_index + games_per_batch, total_games)
-        batch_df = df_new_games[start_index:end_index]
-        
-        # Processing the batch
-        print(f'Processing batch {batch_index + 1}/{batch_nb}.')
-        start_time = time.time()
-
-        # Get a proxy
-        proxy = get_proxy()
-        
-        # Generate and insert the games and game reports
-        df_new_game_reports = fn_generate_game_reports(batch_df, proxy=proxy)
-        fn_insert_games_and_game_reports(batch_df, df_new_game_reports)
-        end_time = time.time()
-        
-        # Calculate and print the elapsed time
-        elapsed_time = end_time - start_time
-        elapsed_minutes, elapsed_seconds = divmod(elapsed_time, 60)
-        print(f'Batch {batch_index + 1}/{batch_nb} inserted in {int(elapsed_minutes):02d}:{int(elapsed_seconds):02d} minutes.')
-
-        
-
-    message = 'All imports successfully completed'
     print(f'Program finished at: {datetime.now().strftime("%H:%M:%S")}')
-    print(message)
-    return(message)
+    return 
 
 
 if __name__ == "__main__":

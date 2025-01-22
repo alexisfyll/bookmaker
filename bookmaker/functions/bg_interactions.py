@@ -1,7 +1,7 @@
 import pandas as pd
 from pandas_gbq import read_gbq, to_gbq
 from dotenv import load_dotenv
-from bookmaker.functions import fn_get_game_report, ScrappingError
+from bookmaker.functions import fn_get_game_report, get_proxy, ScrappingError
 import random
 import os
 import time
@@ -59,6 +59,45 @@ def fn_get_database_game_ids(competitions_ids: list, seasons: list):
     return read_gbq(query, project_id=project_id)
 
 
+def fn_insert_new_teams(df_new_games: pd.DataFrame):
+    """
+    Insert the new teams into the BigQuery table.
+
+    Parameters:
+    df_new_games (pd.DataFrame): A dataframe containing the new games.
+
+    """
+
+    # get the teams scraped
+    df_teams_fbref = pd.concat([
+        df_new_games[['home_id', 'home_team']].rename(columns={'home_id': 'id', 'home_team': 'name'}),
+        df_new_games[['away_id', 'away_team']].rename(columns={'away_id': 'id', 'away_team': 'name'})
+        ]).drop_duplicates().reset_index(drop=True)
+    
+    query = """
+            SELECT id
+            FROM `fbref_raw_data.teams`
+            """
+
+    df_teams_db = read_gbq(query, project_id=project_id)
+
+    df_new_teams = fn_compare_id(df_teams_db, df_teams_fbref)
+
+    if df_new_teams.empty:
+        message = "No new team to insert."
+        print(message)
+        return (message)
+    elif df_new_teams.isnull().any().any() == True:
+        raise ScrappingError("Error while scrapping with null value in teams.")
+    
+    teams_table='fbref_raw_data.teams'
+    to_gbq(df_new_teams, teams_table, project_id=project_id, if_exists='append')
+    
+    message = f"{df_new_teams.shape[0]} new teams inserted successfully."
+    print(message)
+    return(message)
+
+
 def fn_generate_game_reports(df_new_games: pd.DataFrame, proxy: str = None):
     """
     Generate the game_reports rows for the new games scrapped.
@@ -99,6 +138,7 @@ def fn_generate_game_reports(df_new_games: pd.DataFrame, proxy: str = None):
 
     return df_game_reports
 
+
 def fn_insert_games_and_game_reports(df_new_games: pd.DataFrame, df_new_game_reports: pd.DataFrame):
     """
     Insert the new games and game reports into the BigQuery table.
@@ -108,6 +148,7 @@ def fn_insert_games_and_game_reports(df_new_games: pd.DataFrame, df_new_game_rep
     df_new_game_reports (pd.DataFrame): A dataframe containing the new game reports.
 
     """
+
     games_table='fbref_raw_data.games'
     game_reports_table='fbref_raw_data.game_reports'
 
@@ -122,40 +163,43 @@ def fn_insert_games_and_game_reports(df_new_games: pd.DataFrame, df_new_game_rep
     return (message)
 
 
-def fn_insert_new_teams(df_new_games: pd.DataFrame):
-    """
-    Insert the new teams into the BigQuery table.
+def fn_batch_scrapping_insert(df_new_games: pd.DataFrame, use_proxy: bool = True, games_per_batch: int = 10):
+    # Generation and imports by batches of 10 games to avoid timeout
+    total_games = df_new_games.shape[0]
+    batch_nb = (total_games + games_per_batch - 1) // games_per_batch  # Calculate the number of batches
 
-    Parameters:
-    df_new_games (pd.DataFrame): A dataframe containing the new games.
+    # Loop over the batches
+    for batch_index in range(batch_nb):
+        # Make a pause to avoid being blocked
+        if batch_index > 0:
+            print(f'Waiting 30 seconds before processing the next batch.')
+            time.sleep(30)
 
-    """
+        # Extract the batch of games
+        start_index = batch_index * games_per_batch
+        end_index = min(start_index + games_per_batch, total_games)
+        batch_df = df_new_games[start_index:end_index]
+        
+        # Processing the batch
+        print(f'Processing batch {batch_index + 1}/{batch_nb}.')
+        start_time = time.time()
 
-    # get the teams scraped
-    df_teams_fbref = pd.concat([
-        df_new_games[['home_id', 'home_team']].rename(columns={'home_id': 'id', 'home_team': 'name'}),
-        df_new_games[['away_id', 'away_team']].rename(columns={'away_id': 'id', 'away_team': 'name'})
-        ]).drop_duplicates().reset_index(drop=True)
-    
-    query = """
-            SELECT id
-            FROM `fbref_raw_data.teams`
-            """
+        # Generate game reports with proxy condition
+        if use_proxy == True:
+            proxy = get_proxy()
+            df_new_game_reports = fn_generate_game_reports(batch_df, proxy=proxy)
+        else:
+            df_new_game_reports = fn_generate_game_reports(batch_df)
+        
+        # Insert games and game_reports 
+        fn_insert_games_and_game_reports(batch_df, df_new_game_reports)
+        end_time = time.time()
+        
+        # Calculate and print the elapsed time
+        elapsed_time = end_time - start_time
+        elapsed_minutes, elapsed_seconds = divmod(elapsed_time, 60)
+        print(f'Batch {batch_index + 1}/{batch_nb} inserted in {int(elapsed_minutes):02d}:{int(elapsed_seconds):02d} minutes.')
 
-    df_teams_db = read_gbq(query, project_id=project_id)
-
-    df_new_teams = fn_compare_id(df_teams_db, df_teams_fbref)
-
-    if df_new_teams.empty:
-        message = "No new team to insert."
-        print(message)
-        return (message)
-    elif df_new_teams.isnull().any().any() == True:
-        raise ScrappingError("Error while scrapping with null value in teams.")
-    
-    teams_table='fbref_raw_data.teams'
-    to_gbq(df_new_teams, teams_table, project_id=project_id, if_exists='append')
-    
-    message = f"{df_new_teams.shape[0]} new teams inserted successfully."
+    message = 'All imports successfully completed'
     print(message)
     return(message)
