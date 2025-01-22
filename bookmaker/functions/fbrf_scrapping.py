@@ -10,6 +10,35 @@ class ScrappingError(Exception):
     pass
 
 
+def get_proxy(url: str = 'https://fbref.com/en/matches/'):
+    # Free proxies
+    response = requests.get('https://free-proxy-list.net/') 
+    html_content = StringIO(response.text)
+    df_p = pd.read_html(html_content)[0]
+    
+    # Keep 50 most recent ip with https
+    df_p = df_p[df_p['Https']=='yes'].head(50).reset_index(drop=True)
+    df_p['proxy'] = 'http://' + df_p['IP Address'] + ':' + df_p['Port'].astype(str)
+    
+    # Store in list
+    proxies = df_p['proxy'].tolist()
+
+    # Loop to find a working proxy
+    print(f'Looking for a working proxy at {datetime.now().strftime("%H:%M:%S")}')
+    for p in proxies:
+        try:
+            response = requests.get(url, proxies={"http": p, "https": p}, timeout=10)
+            if response.status_code == 200:
+                print ('Proxy is working:', p)
+                return p
+        except:
+            pass
+    
+    print ('No working proxy found')
+    return None
+                
+    
+
 def fn_get_season_calendar(competition_ids: list, seasons: list, max_gameweek: int = None, proxy: str = None):
     """
     Function that returns the fixtures of a season of a competition
@@ -301,32 +330,3 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str, proxy
 
     return df_output
 
-
-def get_proxy(url: str = 'https://fbref.com/en/matches/'):
-    # Free proxies
-    response = requests.get('https://free-proxy-list.net/') 
-    html_content = StringIO(response.text)
-    df_p = pd.read_html(html_content)[0]
-    
-    # Keep 50 most recent ip with https
-    df_p = df_p[df_p['Https']=='yes'].head(50).reset_index(drop=True)
-    df_p['proxy'] = 'http://' + df_p['IP Address'] + ':' + df_p['Port'].astype(str)
-    
-    # Store in list
-    proxies = df_p['proxy'].tolist()
-
-    # Loop to find a working proxy
-    print(f'Looking for a working proxy at {datetime.now().strftime("%H:%M:%S")}')
-    for p in proxies:
-        try:
-            response = requests.get(url, proxies={"http": p, "https": p}, timeout=10)
-            if response.status_code == 200:
-                print ('Proxy is working:', p)
-                return p
-        except:
-            pass
-    
-    print ('No working proxy found')
-    return None
-                
-    

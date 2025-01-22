@@ -1,7 +1,7 @@
 from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_insert_new_teams, \
                                 fn_generate_game_reports, fn_insert_games_and_game_reports
 
-def get_fixtures(competition_ids, seasons, max_gameweek):
+def get_fixtures(competition_ids:list, seasons:list, max_gameweek: int = None):
     df_fbref_data = fn_get_season_calendar(competition_ids, seasons, max_gameweek)
     return df_fbref_data
 

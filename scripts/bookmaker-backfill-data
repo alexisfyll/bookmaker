@@ -17,47 +17,33 @@ from bookmaker.functions import (
 from bookmaker.functions import fn_get_season_calendar, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, fn_insert_games_and_game_reports, fn_insert_new_teams, get_proxy, ScrappingError
 from datetime import datetime
 
-def main(competition_ids, seasons, max_gameweek=None):
+def main(competition_ids: list, seasons: list, max_gameweek: int = None):
     # Validate parameters
     print(f'Program executed at: {datetime.now().strftime("%H:%M:%S")}')
 
-    if max_gameweek is None:
-        max_gameweek = 100
-
     # Get the numbers of competitions and seasons
     n_scrap = len(competition_ids) * len(seasons)
-    
-    if n_scrap > 8:
-        count = 0
-        df_fbref_data = pd.DataFrame()
-        # Loop over the competitions and seasons
-        for c in competition_ids:
-            for s in seasons:
-                # Get proxy every 6 associations
-                if count % 6 == 0:
-                    proxy = get_proxy()
-                
-                # Trying to scrap with proxy, if it fails, try without proxy
-                try:
-                    df_temp = fn_get_season_calendar([c], [s], max_gameweek=max_gameweek, proxy=proxy)
+    season_count = 0
+    df_fbref_data = pd.DataFrame()
+    # Loop over the competitions and seasons
+    for c in competition_ids:
+        for s in seasons:
+            # Scrap with a new proxy every 8 associations
+            if season_count % 8 == 0:
+                proxy = get_proxy()
+            
+            # Trying to scrap with proxy, if it fails, try without proxy
+            try:
+                df_temp = fn_get_season_calendar([c], [s], max_gameweek=max_gameweek, proxy=proxy)
 
-                except ScrappingError as e:
-                    print(f'Calendar {count + 1}/{n_scrap} failed with proxy. Trying without proxy.')
-                    df_temp = fn_get_season_calendar([c], [s], max_gameweek=max_gameweek, proxy=None)
+            except ScrappingError as e:
+                print(f'Calendar {season_count + 1}/{n_scrap} failed with proxy. Trying without proxy.')
+                df_temp = fn_get_season_calendar([c], [s], max_gameweek=max_gameweek, proxy=None)
 
-                df_fbref_data = pd.concat([df_fbref_data, df_temp], ignore_index=True)
+            df_fbref_data = pd.concat([df_fbref_data, df_temp], ignore_index=True)
 
-                print(f'Calendar {count + 1}/{n_scrap} scrapped.')
-                count += 1
-    
-    else:
-        proxy = get_proxy()
-        try:
-            df_fbref_data = fn_get_season_calendar(competition_ids, seasons, max_gameweek=max_gameweek, proxy=proxy)
-        except ScrappingError as e:
-            print(f'Calendars scrapping failed with proxy. Trying without proxy.')
-            df_fbref_data = fn_get_season_calendar(competition_ids, seasons, max_gameweek=max_gameweek, proxy=None)
-
+            print(f'Calendar {season_count + 1}/{n_scrap} scrapped.')
+            season_count += 1
 
     print(f'Calendars successfully scrapped.')
     
@@ -124,3 +110,4 @@ if __name__ == "__main__":
     seasons = ['2019-2020', '2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025']
 
     main(competition_ids, seasons)
+
