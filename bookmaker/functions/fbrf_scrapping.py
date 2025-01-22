@@ -43,7 +43,7 @@ def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=
 
             # Table cleaning
             mask_completed_games = (df_fixtures['Match Report'] == 'Match Report') & (df_fixtures['Notes'].isnull()) # To exclude extraordinary events (Match cancelled, forfeit, etc..)
-            df_fixtures = df_fixtures[mask_completed_games][['Wk', 'Date', 'Home', 'Score', 'Away']] 
+            df_fixtures = df_fixtures[mask_completed_games][['Wk', 'Date', 'Home', 'Score', 'Away']].reset_index(drop=True) 
             df_fixtures.rename(columns={'Wk': 'gameweek',
                                     'Date': 'date',
                                     'Home': 'home_team',
@@ -107,9 +107,14 @@ def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=
 
             # Concatenate the fixtures and ids
             df_season_games = pd.concat([df_fixtures, df_id], axis=1)
+            
+            # Check if error in merging process
+            if df_season_games.isnull().any() == True:
+                raise ValueError(f'Null value occured for competition_id {competition_id} and season {season}')
+            
+            # Add season and competition id columns + sorting with the parameter
             df_season_games['season'] = season
             df_season_games['competition_id'] = competition_id
-
             df_season_games = df_season_games[df_season_games['gameweek'] <= max_gameweek]
 
             # Concatenate the different seasons
@@ -126,7 +131,10 @@ def fn_get_game_report(game_id: str, home_team_id: str, away_team_id: str, proxy
     Function that takes game_id, home_id and away_id to generate game reports for both teams
     """
     # Url parameter
-    game_url = 'https://fbref.com/en/matches/' + game_id
+    try:
+        game_url = 'https://fbref.com/en/matches/' + str(game_id)
+    except e:
+        raise ValueError(f'Error with game_id {game_id}. Error : {e}')        
 
     # Initializing parser
     if proxy is not None:
