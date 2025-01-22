@@ -1,7 +1,7 @@
 import pandas as pd
 from pandas_gbq import read_gbq, to_gbq
 from dotenv import load_dotenv
-from bookmaker.functions import fn_get_game_report
+from bookmaker.functions import fn_get_game_report, ScrappingError
 import random
 import os
 import time
@@ -59,7 +59,7 @@ def fn_get_database_game_ids(competitions_ids: list, seasons: list):
     return read_gbq(query, project_id=project_id)
 
 
-def fn_generate_game_reports(df_new_games: pd.DataFrame):
+def fn_generate_game_reports(df_new_games: pd.DataFrame, proxy: str = None):
     """
     Generate the game_reports rows for the new games scrapped.
 
@@ -71,12 +71,30 @@ def fn_generate_game_reports(df_new_games: pd.DataFrame):
 
     """
     df_game_reports = pd.DataFrame()
+
+    # Loop over games to get the game reports
     for i in range (df_new_games.shape[0]):
-        if i>0:
-            delay = random.uniform(3, 7)  # Random delay between 4-6 seconds
+        
+        # Apply a random delay if no proxy used
+        if i>0 and proxy is None: 
+            delay = random.uniform(3, 7)  # Random delay between 3-7 seconds
             time.sleep(delay)
 
-        df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i])
+        try:
+            df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i], proxy=proxy)
+            print(f"Game {i+1} out of {df_new_games.shape[0]} scrapped for current batch with proxy.")
+
+        except ScrappingError as e:
+            df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i])
+            print(f"Game {i+1} out of {df_new_games.shape[0]} scrapped for current batch without proxy.")
+        
+        except AttributeError as e:
+            print(f"AttributeError: {e}. Trying again without proxy in 1 minute.")
+            time.sleep(60)
+            df_temp = fn_get_game_report(df_new_games['id'].iloc[i], df_new_games['home_id'].iloc[i], df_new_games['away_id'].iloc[i])
+            print(f"Game {i+1} out of {df_new_games.shape[0]} scrapped for current batch without proxy.")
+        
+        # Concatenate the new game reports to the existing ones
         df_game_reports = pd.concat([df_game_reports, df_temp], ignore_index=True)  
 
     return df_game_reports
@@ -112,7 +130,6 @@ def fn_insert_new_teams(df_new_games: pd.DataFrame):
     df_new_games (pd.DataFrame): A dataframe containing the new games.
 
     """
-    teams_table='fbref_raw_data.teams'
 
     # get the teams scraped
     df_teams_fbref = pd.concat([
@@ -133,9 +150,10 @@ def fn_insert_new_teams(df_new_games: pd.DataFrame):
         message = "No new team to insert."
         print(message)
         return (message)
+    elif df_new_teams.isnull().any() == True:
+        raise ScrappingError("Error while scrapping with null value in teams.")
     
     teams_table='fbref_raw_data.teams'
-
     to_gbq(df_new_teams, teams_table, project_id=project_id, if_exists='append')
     
     message = f"{df_new_teams.shape[0]} new teams inserted successfully."
