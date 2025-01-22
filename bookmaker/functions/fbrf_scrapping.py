@@ -109,7 +109,7 @@ def fn_get_season_calendar(competition_ids:list, seasons:list, max_gameweek:int=
             df_season_games = pd.concat([df_fixtures, df_id], axis=1)
             
             # Check if error in merging process
-            if df_season_games.isnull().any() == True:
+            if df_season_games.isnull().any().any() == True:
                 raise ValueError(f'Null value occured for competition_id {competition_id} and season {season}')
             
             # Add season and competition id columns + sorting with the parameter
