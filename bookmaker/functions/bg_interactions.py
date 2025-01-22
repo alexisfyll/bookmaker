@@ -150,7 +150,7 @@ def fn_insert_new_teams(df_new_games: pd.DataFrame):
         message = "No new team to insert."
         print(message)
         return (message)
-    elif df_new_teams.isnull().any() == True:
+    elif df_new_teams.isnull().any().any() == True:
         raise ScrappingError("Error while scrapping with null value in teams.")
     
     teams_table='fbref_raw_data.teams'
