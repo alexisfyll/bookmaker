@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-import sys
-import re
-from bookmaker.functions import fn_get_seasons_calendars, fn_get_database_game_ids, fn_compare_id, fn_generate_game_reports, fn_insert_games_and_game_reports, fn_insert_new_teams
+import re, sys
 from datetime import datetime
+from bookmaker.functions import (
+    fn_get_seasons_calendars,
+    fn_get_database_game_ids,
+    fn_compare_id,
+    fn_batch_scrapping_insert,
+    fn_insert_new_teams
+)
 
 def validate_competition_ids(competition_ids):
     try:
@@ -25,62 +30,51 @@ def validate_max_gameweek(max_gameweek):
             raise ValueError("Max gameweek must be an integer.")
     return None
 
-"""
-def main(competition_ids, seasons, max_gameweek):
-    # Validate parameters
+def validate_use_proxy(use_proxy):
+    if type(use_proxy) == bool:
+        return use_proxy
+    else:
+        raise ValueError("Use_proxy should be a boolean.")
+
+
+def main(competition_ids: list, seasons: list, max_gameweek: int = None, use_proxy: bool = True):
+    # Parameters validation
     competition_ids = validate_competition_ids(competition_ids)
     seasons = validate_seasons(seasons)
     max_gameweek = validate_max_gameweek(max_gameweek)
+    use_proxy = validate_use_proxy(use_proxy)
 
     print(f'Program executed at: {datetime.now().strftime("%H:%M:%S")}')
-    
-    # Get the seasons calendars from FBref
-    if max_gameweek is None:
-        df_fbref_data = fn_get_season_calendar(competition_ids, seasons)
-    else:
-        df_fbref_data = fn_get_season_calendar(competition_ids, seasons, max_gameweek)
-    
-    print(f'Calendars scrapped.')
+    # Calendars scrapping
+    df_fbref_data = fn_get_seasons_calendars(competition_ids=competition_ids, seasons=seasons, max_gameweek=max_gameweek, use_proxy=use_proxy)
     
     # Get the corresponding games from the database
     df_games_db = fn_get_database_game_ids(competition_ids, seasons)
 
     # Check if there are new games
     df_new_games = fn_compare_id(df_games_db, df_fbref_data)
-
     if df_new_games.empty:
-        print('No new game to insert.')
-        return
+        message = 'No new game to insert.'
+        print(message)
+        return message
     else:
-        print(f'{df_new_games.shape[0]} new games to insert')
-
+        print(f'{df_new_games.shape[0]} new game(s) to insert')
+    
     # Create new teams if necessary
     fn_insert_new_teams(df_new_games)
 
-    # Generation and imports by batches of 10 games to avoid timeout
-    games_per_batch = 10
-    total_games = df_new_games.shape[0]
-    batch_nb = (total_games + games_per_batch - 1) // games_per_batch  # Calculate the number of batches
+    # Get and insert games & game_reports
+    fn_batch_scrapping_insert(df_new_games, use_proxy=use_proxy)
 
-    for batch_index in range(batch_nb):
-        start_index = batch_index * games_per_batch
-        end_index = min(start_index + games_per_batch, total_games)
-        batch_df = df_new_games[start_index:end_index]
-        
-        print(f'Processing batch {batch_index + 1}/{batch_nb}.')
-        df_new_game_reports = fn_generate_game_reports(batch_df)
-        fn_insert_games_and_game_reports(batch_df, df_new_game_reports)
-        print(f'Batch {batch_index + 1}/{batch_nb} inserted.')
-
-    message = 'All imports successfully completed'
     print(f'Program finished at: {datetime.now().strftime("%H:%M:%S")}')
-    print(message)
-    return(message)"""
+    return 
 
 if __name__ == "__main__":
     # Make competitions and seasons as list
     competition_ids = sys.argv[1].split(',')
     seasons = sys.argv[2].split(',')
     max_gameweek = sys.argv[3] if len(sys.argv) > 3 else None
+    
+    use_proxy = True # True by default
 
-    main(competition_ids, seasons, max_gameweek)
+    main(competition_ids, seasons, max_gameweek, use_proxy)

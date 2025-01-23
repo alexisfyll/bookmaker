@@ -45,7 +45,7 @@ def fn_get_seasons_calendars(competition_ids: list, seasons: list, max_gameweek:
     # Get the numbers of competitions and seasons
     n_calendars = len(competition_ids) * len(seasons)
     calendar_count = 0
-
+    print(f'{n_calendars} season calendars to scrap.')
     # Loop over the competitions and seasons
     for competition_id in competition_ids:
         for season in seasons:
@@ -159,6 +159,7 @@ def fn_get_seasons_calendars(competition_ids: list, seasons: list, max_gameweek:
             
             calendar_count += 1
 
+    print(f"Calendars successfully scrapped.")
     return df_calendars
 
 

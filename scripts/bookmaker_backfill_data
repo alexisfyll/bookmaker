@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+
+from scripts.bookmaker_update_data import main as main_update
+
+def main(competition_ids: list, seasons: list):
+    return main_update(competition_ids, seasons)
+
+
+if __name__ == "__main__":
+    # Make competitions and seasons as list
+    competition_ids = [20] # [11, 9, 12, 13, 20] # 9-PL 11-SerieA 12-LaLiga 13-Ligue1 20-Bundesligua
+    seasons = ['2019-2020', '2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025']
+
+    main(competition_ids, seasons)
+

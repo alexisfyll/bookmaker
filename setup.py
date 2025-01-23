@@ -13,5 +13,5 @@ setup(name='bookmaker',
       test_suite='tests',
       # include_package_data: to install data from MANIFEST.in
       include_package_data=True,
-      scripts=['scripts/bookmaker-update-data', 'scripts/bookmaker-backfill-data'],
+      scripts=['scripts/bookmaker_update_data', 'scripts/bookmaker_backfill_data'],
       zip_safe=False)
